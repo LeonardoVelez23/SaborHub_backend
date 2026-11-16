@@ -14,7 +14,9 @@
  * - Constitución de la República del Ecuador, art. 66 num. 19.
  * - Ley Orgánica de Protección de Datos Personales (LOPDP), R.O. Supl. 459,
  *   26-05-2021 (art. 43 reformado en 2026): arts. 4, 7, 8, 9, 10, 12 a 20,
- *   24, 26, 34, 37, 39, 43, 46, 48, 55 a 57. Reglamento General: Decreto
+ *   24, 26, 34, 37, 39, 43, 46, 55 a 57. No se designa delegado de protección
+ *   de datos: el restaurante no es del sector público ni trata datos sensibles
+ *   a gran escala (art. 48). Reglamento General: Decreto
  *   Ejecutivo 904, R.O. 3er Supl. 435, 13-11-2023.
  * - Ley Orgánica de Defensa del Consumidor (LODC), R.O. Supl. 116,
  *   10-07-2000: arts. 4, 9, 41, 42, 43 y 45.
@@ -25,18 +27,14 @@
  * responsable del restaurante, y un abogado debe revisar el texto antes de
  * publicar la app en las tiendas.
  */
-export const VERSION_LEGAL = '2026-11-16.2';
+export const VERSION_LEGAL = '2026-11-16.3';
 
 export const RESPONSABLE = {
   nombre: 'Sabor Politécnico, restaurante universitario',
   razonSocial: '[Razón social o nombre del titular, y número de RUC]',
   direccion: '[Dirección del domicilio legal, Calceta, Manabí]',
   telefono: '[Teléfono de contacto]',
-  correo: '[Correo de contacto para protección de datos]',
-  // Obligatorio si el restaurante pertenece al sector público (p. ej. si lo
-  // opera la universidad): LOPDP art. 48 num. 1. Si no aplica, quitar la línea
-  // que lo menciona en la sección 2 de la política.
-  delegado: '[Nombre y correo del delegado de protección de datos personales, si se designa]'
+  correo: '[Correo de contacto para protección de datos]'
 };
 
 const terminos = {
@@ -177,8 +175,7 @@ const privacidad = {
       titulo: '2. Responsable del tratamiento',
       parrafos: [
         `${RESPONSABLE.razonSocial}, que opera ${RESPONSABLE.nombre}, es el responsable del tratamiento de tus datos: decide para qué y cómo se tratan (LOPDP, art. 4).`,
-        `Domicilio: ${RESPONSABLE.direccion}. Teléfono: ${RESPONSABLE.telefono}. Correo: ${RESPONSABLE.correo}.`,
-        `Delegado de protección de datos personales: ${RESPONSABLE.delegado}.`
+        `Domicilio: ${RESPONSABLE.direccion}. Teléfono: ${RESPONSABLE.telefono}. Correo: ${RESPONSABLE.correo}.`
       ]
     },
     {
@@ -234,7 +231,7 @@ const privacidad = {
     {
       titulo: '8. Transferencia internacional de datos',
       parrafos: [
-        'Como nuestros proveedores alojan los datos fuera del Ecuador (Estados Unidos y la Unión Europea), hay una transferencia internacional de datos. La hacemos con las garantías adecuadas que exige la LOPDP (arts. 55 a 57): contratos con cada proveedor que les obligan a proteger tus datos con un nivel igual o mayor al de la ley ecuatoriana, sin que eso limite tus derechos, que siempre puedes ejercer ante nosotros.'
+        'Como nuestros proveedores alojan los datos fuera del Ecuador (Estados Unidos y la Unión Europea), hay una transferencia internacional de datos. La hacemos con las garantías adecuadas que exige la LOPDP (arts. 55 a 57): los acuerdos de tratamiento de datos que forman parte de los contratos de servicio de cada proveedor, con cláusulas contractuales tipo, les obligan a proteger tus datos con un nivel igual o mayor al de la ley ecuatoriana. Eso no limita tus derechos, que siempre puedes ejercer ante nosotros.'
       ]
     },
     {
