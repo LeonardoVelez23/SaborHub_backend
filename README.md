@@ -217,6 +217,23 @@ src/
   routes/
 ```
 
+## Despliegue en Railway
+
+El backend corre en Railway y usa la base de datos de Supabase (Supabase solo guarda los datos). `railway.json` define el arranque (`npm start`) y el health check (`/api/v1/health`).
+
+1. En el proyecto de Railway: **New → GitHub Repo → `logrod_backend`**, rama `develop` (o `main` cuando se publique una versión).
+2. **Variables** del servicio:
+   - `NODE_ENV=production`
+   - `DATABASE_URL`: la misma de Supabase del `.env` (pooler, puerto 5432).
+   - `JWT_SECRET`: uno nuevo y largo (no el de desarrollo).
+   - `CORS_ORIGIN`: dominios de la web separados por coma (la app móvil no lo necesita).
+   - Correo: `BREVO_API_KEY` o `SMTP_*`, y `EMAIL_FROM`.
+   - Payphone: `PAYPHONE_TOKEN`, `PAYPHONE_STORE_ID` y `PAYPHONE_RESPONSE_URL=https://<dominio-railway>/pagos/payphone/retorno`.
+   - `PORT` no se configura: lo pone Railway.
+3. **Settings → Networking → Generate Domain**: da `https://<nombre>.up.railway.app`.
+4. Las migraciones no corren al desplegar: se aplican a Supabase desde el PC con `npx sequelize-cli db:migrate` (el `.env` apunta a Supabase).
+5. La app se compila con `--dart-define=API_BASE_URL=https://<nombre>.up.railway.app/api/v1`.
+
 ## Lanzamiento recomendado
 
 Para lanzar el backend localmente:
