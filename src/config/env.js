@@ -35,7 +35,7 @@ export const config = {
     storeId: process.env.PAYPHONE_STORE_ID || '',
     // Página pública de este backend: <servidor>/pagos/payphone/retorno
     responseUrl: process.env.PAYPHONE_RESPONSE_URL || '',
-    // Enlace para volver a la app al terminar (se agrega /pedidos/<id>).
+    // Enlace para volver a la app al terminar (se agrega /pedidos/<id>/pago).
     appUrl: process.env.APP_DEEP_LINK || 'saborpolitecnico://app'
   }
 };

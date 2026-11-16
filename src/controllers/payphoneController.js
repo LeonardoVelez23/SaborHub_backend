@@ -111,7 +111,8 @@ export const prepararPagoPayphone = async (req, res, next) => {
   }
 };
 
-const enlaceApp = (pedidoId) => `${config.payphone.appUrl}/pedidos/${pedidoId}`;
+/** Abre en la app la pantalla con el resultado del pago (monto, referencia y estado). */
+const enlaceApp = (pedidoId) => `${config.payphone.appUrl}/pedidos/${pedidoId}/pago`;
 
 const responderPagina = (res, status, datos) =>
   res

@@ -129,7 +129,7 @@ describe('Pago con tarjeta por Payphone (RF-22)', () => {
 
     expect(res.status).toBe(200);
     expect(res.text).toContain('Pago aprobado');
-    expect(res.text).toContain(`saborpolitecnico://app/pedidos/${pedido.id}`);
+    expect(res.text).toContain(`saborpolitecnico://app/pedidos/${pedido.id}/pago`);
     expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ id: 98765, clientTxId: tx });
     const pago = await Pago.findOne({ where: { pedido_id: pedido.id } });
     expect(pago).toMatchObject({ estado: 'aprobado', metodo_pago: 'tarjeta', valor: 5, numero_referencia: 'Payphone 98765' });

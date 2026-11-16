@@ -187,7 +187,7 @@ Flujo (botón de pago por redirección de Payphone, ambiente de **pruebas**: no 
 1. La app llama `POST /api/v1/pagos/payphone/preparar` `{pedido_id}` (solo cliente, pedido propio no cancelado y sin pago cerrado; se puede pagar desde que está `solicitado`). Responde `{url}`: el formulario de tarjeta de Payphone, que vence a los 10 minutos.
 2. `url` es una página intermedia del backend (`GET /pagos/payphone/ir?u=<payWithCard>`, solo redirige a `*.payphonetodoesposible.com`): Payphone rechaza ("No autorizado") los pagos cuyo `Referer` no es el *Dominio web* registrado, así que esa página los abre desde nuestro dominio con `Referrer-Policy: origin`. La app abre `url` en una pestaña del navegador (Custom Tabs / SFSafariViewController; Payphone no permite webviews).
 3. Payphone devuelve al navegador a `GET /pagos/payphone/retorno?id=&clientTransactionId=` (fuera de `/api/v1`). El backend confirma con Payphone (`/api/button/V2/Confirm`, antes de 5 minutos o Payphone lo revierte), verifica el monto y registra el `Pago` como `aprobado` (`tarjeta`, referencia `Payphone <id>`). Si el pedido se canceló mientras pagaba, queda `reembolsado`.
-4. La página tiene el botón "Volver a la app" (`saborpolitecnico://app/pedidos/<id>`).
+4. La página tiene el botón "Volver a la app" (`saborpolitecnico://app/pedidos/<id>/pago`), que abre en la app el resultado del pago: monto, referencia y estado.
 
 Configuración (`.env`): `PAYPHONE_TOKEN` y `PAYPHONE_RESPONSE_URL` (sin ellos `preparar` responde 503) y, opcional, `PAYPHONE_STORE_ID` (sin él, Payphone usa la tienda del token). Ver `.env.example`.
 

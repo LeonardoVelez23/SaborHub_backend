@@ -263,6 +263,27 @@ describe('Pedidos (bloque 2)', () => {
       expect(res.body.data[0]).not.toHaveProperty('cliente');
     });
 
+    it('incluye el pago con su referencia', async () => {
+      const producto = await crearProducto();
+      const pedido = await pedir(tokenAna, [{ producto_id: producto.id, cantidad: 1 }]);
+      await Pago.create({
+        pedido_id: pedido.body.data.id,
+        fecha: new Date(),
+        valor: pedido.body.data.valor_total,
+        metodo_pago: 'tarjeta',
+        numero_referencia: 'Payphone 123',
+        estado: 'aprobado'
+      });
+
+      const res = await api().get('/api/v1/pedidos/mios').set(auth(tokenAna));
+
+      expect(res.body.data[0].pago).toMatchObject({
+        metodo_pago: 'tarjeta',
+        numero_referencia: 'Payphone 123',
+        estado: 'aprobado'
+      });
+    });
+
     it('el personal no usa esta ruta', async () => {
       const res = await api().get('/api/v1/pedidos/mios').set(auth(tokenCajero));
 

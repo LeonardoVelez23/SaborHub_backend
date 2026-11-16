@@ -89,7 +89,7 @@ export const getMisPedidos = async (req, res, next) => {
                     as: 'detalles',
                     include: { model: Producto, as: 'producto', attributes: ATRIBUTOS_PRODUCTO }
                 },
-                { model: Pago, as: 'pago', attributes: ['id', 'fecha', 'valor', 'metodo_pago', 'estado'] }
+                { model: Pago, as: 'pago', attributes: ['id', 'fecha', 'valor', 'metodo_pago', 'numero_referencia', 'estado'] }
             ],
             order: [['id', 'DESC']]
         });
