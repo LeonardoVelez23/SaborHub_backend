@@ -213,13 +213,55 @@ HTML con los colores de marca, generado con los mismos textos de `src/legal/docu
 
 ```text
 src/
-  app.js
-  index.js
-  config/
-  controllers/
-  middlewares/
-  routes/
+  app.js          # Express: middlewares, rutas y manejo de errores
+  index.js        # Arranque del servidor
+  config/         # Variables de entorno y conexión a la base
+  controllers/    # Manejo de cada petición
+  legal/          # Textos legales y páginas HTML públicas
+  middlewares/    # Token, roles, límites de peticiones, errores
+  migrations/     # Esquema versionado (sequelize-cli)
+  models/         # Modelos Sequelize y relaciones
+  routes/         # Rutas y permisos por rol
+  seeders/        # Datos de prueba
+  services/       # Lógica reutilizable (stock, OTP, correo, sesión, Payphone)
+  utils/
+tests/            # Vitest + Supertest
 ```
+
+## Principios SOLID
+
+El backend separa rutas, controladores, modelos, middlewares y servicios (RNF-16), pero hoy los **controladores concentran demasiado**: leen la petición, aplican las reglas de negocio, abren transacciones y consultan Sequelize directamente (`pedidoController.js` tiene unas 450 líneas). El objetivo es esta arquitectura en capas:
+
+```text
+Ruta (permisos) → Controlador (HTTP) → Servicio (reglas de negocio) → Repositorio (base de datos)
+```
+
+| Principio | Situación actual | Objetivo |
+|---|---|---|
+| **S** — Responsabilidad única | El controlador valida, decide, guarda y responde. | El **controlador** solo traduce HTTP (lee `req`, responde `res`). El **servicio** aplica las reglas (RN-01 a RN-19) y maneja transacciones. El **repositorio** es el único que usa Sequelize. |
+| **O** — Abierto/cerrado | Agregar otra forma de pago obliga a modificar el controlador de pagos. | Una interfaz `PasarelaPago` (`preparar`, `confirmar`). Payphone es una implementación; otra pasarela se agrega sin tocar las existentes. |
+| **L** — Sustitución de Liskov | — | Cualquier pasarela o repositorio que cumpla el contrato es intercambiable (p. ej., uno en memoria para los tests). |
+| **I** — Segregación de interfaces | — | Repositorios pequeños por entidad (`PedidoRepository`, `PagoRepository`, `ProductoRepository`…), no uno genérico con todo. |
+| **D** — Inversión de dependencias | Los servicios importan los modelos y `config` directamente. | Las dependencias se pasan al crear cada servicio (inyección por parámetros), así se prueban sin base de datos ni red. |
+
+Ya van en esa dirección `stockService`, `otpService`, `sesionService` y `payphoneService`.
+
+### Plan de migración
+
+Módulo por módulo y **sin cambiar la API** (rutas, permisos y respuestas iguales; la app y el panel web no lo notan). Los tests de integración existentes deben seguir en verde en cada paso.
+
+1. Pedidos y pagos (lo más complejo; incluye `PasarelaPago`).
+2. Productos y categorías.
+3. Clientes, empleados, perfil y privacidad.
+
+Esta separación también prepara el soporte de **varios restaurantes**: el filtro por restaurante se aplica en los repositorios, en un solo lugar.
+
+### Reglas para el código nuevo
+
+- Nada de reglas de negocio ni consultas Sequelize nuevas en los controladores.
+- Las transacciones se abren en los servicios.
+- Servicios y repositorios reciben sus dependencias; no leen `process.env` (usar `config`).
+- Cada regla de negocio nueva lleva su test.
 
 ## Despliegue en Railway
 
