@@ -74,7 +74,7 @@ export const login = async (req, res, next) => {
         rol: role
       },
       config.jwtSecret,
-      { expiresIn: '8h' }
+      { expiresIn: role === 'cliente' ? config.sesionCliente : config.sesionPersonal }
     );
 
     const userData = user.toJSON();

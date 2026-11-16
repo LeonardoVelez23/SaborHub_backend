@@ -16,6 +16,10 @@ export const config = {
   corsOrigin: process.env.CORS_ORIGIN,
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET,
+  // Duración de la sesión (formato de jsonwebtoken: 20m, 8h...). Fija desde
+  // el login, sin renovación: al vencer hay que volver a iniciar sesión.
+  sesionCliente: process.env.JWT_EXPIRES_CLIENTE || '20m',
+  sesionPersonal: process.env.JWT_EXPIRES_PERSONAL || '8h',
   // Límite de peticiones en /auth. Solo se desactiva en los tests.
   rateLimitEnabled: process.env.RATE_LIMIT_ENABLED !== 'false',
   // Zona horaria del restaurante: fecha y hora de los pedidos.

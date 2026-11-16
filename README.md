@@ -49,6 +49,7 @@ APP_TIMEZONE=America/Guayaquil
 - `PORT`: puerto donde correrá la API
 - `NODE_ENV`: entorno de ejecución (`development`, `production`, etc.)
 - `JWT_SECRET`: obligatorio; sin él la API no arranca
+- `JWT_EXPIRES_CLIENTE` (por defecto `20m`) y `JWT_EXPIRES_PERSONAL` (por defecto `8h`): duración de la sesión, fija desde el login. Al vencer, el cliente vuelve a iniciar sesión (la app además la cierra tras unos minutos sin uso).
 - `CORS_ORIGIN`: dominios web permitidos, separados por coma. Vacío: cualquiera en desarrollo y ninguno en producción. La app móvil no lo necesita.
 - `APP_TIMEZONE`: zona horaria de la fecha y hora de los pedidos (por defecto `America/Guayaquil`)
 
