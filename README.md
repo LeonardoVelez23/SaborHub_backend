@@ -240,41 +240,44 @@ src/
   app.js          # Express: middlewares, rutas y manejo de errores
   index.js        # Arranque del servidor
   config/         # Variables de entorno y conexión a la base
-  controllers/    # Manejo de cada petición
+  dependencias.js # Raíz de composición: une servicios con repositorios y pasarela
+  controllers/    # Solo HTTP: leen la petición y responden
+  errors/         # ErrorNegocio (regla incumplida con su código HTTP)
   legal/          # Textos legales y páginas HTML públicas
   middlewares/    # Token, roles, límites de peticiones, errores
   migrations/     # Esquema versionado (sequelize-cli)
   models/         # Modelos Sequelize y relaciones
   routes/         # Rutas y permisos por rol
   seeders/        # Datos de prueba
-  services/       # Lógica reutilizable (stock, OTP, correo, sesión, Payphone)
+  repositories/   # Único lugar que consulta Sequelize (pedidos, pagos, productos...)
+  services/       # Reglas de negocio y transacciones; pasarelas/ (contrato PasarelaPago y Payphone)
   utils/
 tests/            # Vitest + Supertest
 ```
 
 ## Principios SOLID
 
-El backend separa rutas, controladores, modelos, middlewares y servicios (RNF-16), pero hoy los **controladores concentran demasiado**: leen la petición, aplican las reglas de negocio, abren transacciones y consultan Sequelize directamente (`pedidoController.js` tiene unas 450 líneas). El objetivo es esta arquitectura en capas:
+El backend separa rutas, controladores, modelos, middlewares y servicios (RNF-16) en capas:
 
 ```text
 Ruta (permisos) → Controlador (HTTP) → Servicio (reglas de negocio) → Repositorio (base de datos)
 ```
 
-| Principio | Situación actual | Objetivo |
-|---|---|---|
-| **S** — Responsabilidad única | El controlador valida, decide, guarda y responde. | El **controlador** solo traduce HTTP (lee `req`, responde `res`). El **servicio** aplica las reglas (RN-01 a RN-19) y maneja transacciones. El **repositorio** es el único que usa Sequelize. |
-| **O** — Abierto/cerrado | Agregar otra forma de pago obliga a modificar el controlador de pagos. | Una interfaz `PasarelaPago` (`preparar`, `confirmar`). Payphone es una implementación; otra pasarela se agrega sin tocar las existentes. |
-| **L** — Sustitución de Liskov | — | Cualquier pasarela o repositorio que cumpla el contrato es intercambiable (p. ej., uno en memoria para los tests). |
-| **I** — Segregación de interfaces | — | Repositorios pequeños por entidad (`PedidoRepository`, `PagoRepository`, `ProductoRepository`…), no uno genérico con todo. |
-| **D** — Inversión de dependencias | Los servicios importan los modelos y `config` directamente. | Las dependencias se pasan al crear cada servicio (inyección por parámetros), así se prueban sin base de datos ni red. |
+| Principio | Cómo se aplica |
+|---|---|
+| **S** — Responsabilidad única | El **controlador** solo traduce HTTP (lee `req`, responde `res`). El **servicio** aplica las reglas (RN-01 a RN-19) y abre las transacciones. El **repositorio** es el único que usa Sequelize. Las reglas sin base de datos (transiciones, stock, totales, fechas) son funciones puras en `services/reglasPedido.js`. |
+| **O** — Abierto/cerrado | `services/pasarelas/pasarelaPago.js` define el contrato `PasarelaPago` (`nombre`, `configurada`, `preparar`, `confirmar`). Payphone (`pasarelas/payphone.js`) es una implementación; otra pasarela se agrega sin tocar `pagoTarjetaService`. |
+| **L** — Sustitución de Liskov | Cualquier pasarela o repositorio que cumpla el contrato es intercambiable: los tests de `tests/unit/pagoTarjetaService.test.js` usan una pasarela falsa y repositorios en memoria. |
+| **I** — Segregación de interfaces | Repositorios pequeños por entidad (`pedidoRepository`, `pagoRepository`, `productoRepository`, `personasRepository`, `transaccionPagoRepository`), no uno genérico. |
+| **D** — Inversión de dependencias | Cada servicio se crea con sus dependencias (`crearPedidoService({pedidos, productos, pagos, personas, transacciones, reloj})`). Solo `src/dependencias.js` conoce las implementaciones reales. |
 
-Ya van en esa dirección `stockService`, `otpService`, `sesionService` y `payphoneService`.
+Errores: un servicio lanza `ErrorNegocio(mensaje, status)` y el `errorHandler` responde `{success: false, message}` con ese código (también 502/503, cuyo mensaje sí se muestra).
 
 ### Plan de migración
 
 Módulo por módulo y **sin cambiar la API** (rutas, permisos y respuestas iguales; la app y el módulo de administración no lo notan). Los tests de integración existentes deben seguir en verde en cada paso.
 
-1. Pedidos y pagos (lo más complejo; incluye `PasarelaPago`).
+1. Pedidos y pagos (lo más complejo; incluye `PasarelaPago`). **Hecho.**
 2. Productos y categorías.
 3. Clientes, empleados, perfil y privacidad.
 

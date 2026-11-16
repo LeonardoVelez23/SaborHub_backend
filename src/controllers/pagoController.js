@@ -1,369 +1,66 @@
-import { Pago, Pedido, Cliente } from '../models/index.js';
+import { pagoService } from '../dependencias.js';
+
+/** Pagos en caja y por el personal: solo HTTP (reglas en services/pagoService.js). */
 
 export const getAllPagos = async (req, res, next) => {
-    try {
-    const pagos = await Pago.findAll({
-        include: {
-        model: Pedido,
-        as: 'pedido',
-        attributes: ['id', 'fecha', 'hora', 'valor_total', 'estado', 'modalidad'],
-        include: {
-            model: Cliente,
-            as: 'cliente',
-            attributes: ['id', 'nombres', 'apellidos', 'identificacion']
-        }
-        },
-        order: [['fecha', 'DESC']]
-    });
-
-    res.status(200).json({
-        success: true,
-        data: pagos
-    });
-    } catch (error) {
+  try {
+    res.status(200).json({ success: true, data: await pagoService.listar() });
+  } catch (error) {
     next(error);
-    }
+  }
 };
 
 /**
- * Pagos del cliente de la sesión (historial "Mis pagos" de la app), del
- * más reciente al más antiguo. Solo pagos registrados: los intentos con
- * tarjeta cancelados o rechazados en Payphone no son pagos.
+ * Pagos del cliente de la sesión ("Mis pagos" de la app). Solo pagos
+ * registrados: los intentos con tarjeta cancelados no son pagos.
  */
 export const getMisPagos = async (req, res, next) => {
-    try {
-    const pagos = await Pago.findAll({
-        attributes: ['id', 'fecha', 'valor', 'metodo_pago', 'numero_referencia', 'estado'],
-        include: {
-        model: Pedido,
-        as: 'pedido',
-        attributes: ['id', 'fecha', 'hora', 'estado', 'valor_total'],
-        where: { cliente_id: req.user.id },
-        required: true
-        },
-        order: [['fecha', 'DESC'], ['id', 'DESC']]
-    });
-
-    res.status(200).json({
-        success: true,
-        data: pagos
-    });
-    } catch (error) {
+  try {
+    res.status(200).json({ success: true, data: await pagoService.misPagos(req.user.id) });
+  } catch (error) {
     next(error);
-    }
+  }
 };
 
 export const getPagoById = async (req, res, next) => {
-    try {
-    const { id } = req.params;
-
-    const pago = await Pago.findByPk(id, {
-        include: {
-        model: Pedido,
-        as: 'pedido',
-        attributes: ['id', 'fecha', 'hora', 'valor_total', 'estado', 'modalidad', 'cliente_id'],
-        include: {
-            model: Cliente,
-            as: 'cliente',
-            attributes: ['id', 'nombres', 'apellidos', 'identificacion', 'correo_electronico']
-        }
-        }
-    });
-
-    if (!pago) {
-        return res.status(404).json({
-        success: false,
-        message: 'Pago no encontrado'
-        });
-    }
-
-    if (req.user.rol === 'cliente' && pago.pedido?.cliente_id !== req.user.id) {
-        return res.status(403).json({
-        success: false,
-        message: 'No tiene permisos para ver este pago'
-        });
-    }
-
-    res.status(200).json({
-        success: true,
-        data: pago
-    });
-    } catch (error) {
+  try {
+    res.status(200).json({ success: true, data: await pagoService.obtener(req.params.id, req.user) });
+  } catch (error) {
     next(error);
-    }
+  }
 };
 
 export const getPagoByPedido = async (req, res, next) => {
-    try {
-    const { pedidoId } = req.params;
-
-    if (req.user.rol === 'cliente') {
-        const pedido = await Pedido.findByPk(pedidoId, { attributes: ['id', 'cliente_id'] });
-        if (pedido && pedido.cliente_id !== req.user.id) {
-        return res.status(403).json({
-            success: false,
-            message: 'No tiene permisos para ver este pago'
-        });
-        }
-    }
-
-    const pago = await Pago.findOne({
-        where: { pedido_id: pedidoId },
-        include: {
-        model: Pedido,
-        as: 'pedido',
-        attributes: ['id', 'fecha', 'valor_total', 'estado']
-        }
-    });
-
-    if (!pago) {
-        return res.status(404).json({
-        success: false,
-        message: 'No se encontró pago para este pedido'
-        });
-    }
-
-    res.status(200).json({
-        success: true,
-        data: pago
-    });
-    } catch (error) {
+  try {
+    res.status(200).json({ success: true, data: await pagoService.delPedido(req.params.pedidoId, req.user) });
+  } catch (error) {
     next(error);
-    }
+  }
 };
 
 export const createPago = async (req, res, next) => {
-    try {
-    const { pedido_id, fecha, valor, metodo_pago, numero_referencia, estado } = req.body;
-
-    if (!pedido_id || !fecha || valor === undefined || !metodo_pago) {
-        return res.status(400).json({
-        success: false,
-        message: 'pedido_id, fecha, valor y metodo_pago son obligatorios'
-        });
-    }
-
-    if (Number(valor) <= 0) {
-        return res.status(400).json({
-        success: false,
-        message: 'El valor del pago debe ser mayor a 0'
-        });
-    }
-
-    const metodosValidos = ['efectivo', 'tarjeta', 'transferencia'];
-    if (!metodosValidos.includes(metodo_pago)) {
-        return res.status(400).json({
-        success: false,
-        message: 'metodo_pago debe ser: efectivo, tarjeta o transferencia'
-        });
-    }
-
-    // Un cliente no aprueba su propio pago: queda pendiente hasta que el
-    // personal lo confirme (la pasarela en línea es simulada, RF-22).
-    const esCliente = req.user.rol === 'cliente';
-    const estadoFinal = esCliente ? 'pendiente' : estado || 'pendiente';
-    const estadosValidos = ['pendiente', 'aprobado', 'rechazado'];
-    if (!estadosValidos.includes(estadoFinal)) {
-        return res.status(400).json({
-        success: false,
-        message: 'estado debe ser: pendiente, aprobado o rechazado'
-        });
-    }
-
-    const pedido = await Pedido.findByPk(pedido_id);
-    if (!pedido) {
-        return res.status(400).json({
-        success: false,
-        message: 'El pedido indicado no existe'
-        });
-    }
-
-    if (esCliente && pedido.cliente_id !== req.user.id) {
-        return res.status(403).json({
-        success: false,
-        message: 'No tiene permisos para pagar este pedido'
-        });
-    }
-
-    if (pedido.estado === 'cancelado') {
-        return res.status(400).json({
-        success: false,
-        message: 'No se puede registrar pago: el pedido está cancelado y no requiere pago'
-        });
-    }
-
-    if (pedido.estado === 'solicitado') {
-        return res.status(400).json({
-        success: false,
-        message: 'El pedido debe estar al menos confirmado para registrar un pago'
-        });
-    }
-
-    if (Number(valor) !== Number(pedido.valor_total)) {
-        return res.status(400).json({
-        success: false,
-        message: `El valor del pago (${valor}) debe coincidir con el total del pedido (${pedido.valor_total})`
-        });
-    }
-
-    const pagoExistente = await Pago.findOne({ where: { pedido_id } });
-    if (pagoExistente) {
-        return res.status(400).json({
-        success: false,
-        message: 'Este pedido ya tiene un pago registrado'
-        });
-    }
-
-    const pago = await Pago.create({
-        pedido_id, fecha, valor, metodo_pago,
-        numero_referencia: numero_referencia?.trim() || null,
-        estado: estadoFinal
-    });
-
-    const pagoCreado = await Pago.findByPk(pago.id, {
-        include: {
-        model: Pedido,
-        as: 'pedido',
-        attributes: ['id', 'fecha', 'valor_total', 'estado']
-        }
-    });
-
-    res.status(201).json({
-        success: true,
-        message: 'Pago registrado correctamente',
-        data: pagoCreado
-    });
-    } catch (error) {
-    if (error.name === 'SequelizeUniqueConstraintError') {
-        return res.status(400).json({
-        success: false,
-        message: 'Este pedido ya tiene un pago registrado'
-        });
-    }
+  try {
+    const data = await pagoService.crear(req.user, req.body ?? {});
+    res.status(201).json({ success: true, message: 'Pago registrado correctamente', data });
+  } catch (error) {
     next(error);
-    }
+  }
 };
 
 export const updatePago = async (req, res, next) => {
-    try {
-    const { id } = req.params;
-    const { fecha, valor, metodo_pago, numero_referencia, estado } = req.body;
-
-    const pago = await Pago.findByPk(id, {
-        include: { model: Pedido, as: 'pedido' }
-    });
-
-    if (!pago) {
-        return res.status(404).json({
-        success: false,
-        message: 'Pago no encontrado'
-        });
-    }
-
-    if (pago.pedido?.estado === 'cancelado' && estado === 'aprobado') {
-        return res.status(400).json({
-        success: false,
-        message: 'No se puede aprobar un pago de un pedido cancelado'
-        });
-    }
-
-    if (valor !== undefined && Number(valor) <= 0) {
-        return res.status(400).json({
-        success: false,
-        message: 'El valor del pago debe ser mayor a 0'
-        });
-    }
-
-    if (valor !== undefined && pago.pedido) {
-        if (Number(valor) !== Number(pago.pedido.valor_total)) {
-        return res.status(400).json({
-            success: false,
-            message: `El valor del pago (${valor}) debe coincidir con el total del pedido (${pago.pedido.valor_total})`
-        });
-        }
-    }
-
-    if (metodo_pago) {
-        const metodosValidos = ['efectivo', 'tarjeta', 'transferencia'];
-        if (!metodosValidos.includes(metodo_pago)) {
-        return res.status(400).json({
-            success: false,
-            message: 'metodo_pago debe ser: efectivo, tarjeta o transferencia'
-        });
-        }
-    }
-
-    if (estado) {
-        const estadosValidos = ['pendiente', 'aprobado', 'rechazado'];
-        if (!estadosValidos.includes(estado)) {
-        return res.status(400).json({
-            success: false,
-            message: 'estado debe ser: pendiente, aprobado o rechazado'
-        });
-        }
-
-        if (estado === 'aprobado') {
-        const pagoAprobado = await Pago.findOne({
-            where: { pedido_id: pago.pedido_id, estado: 'aprobado' }
-        });
-        if (pagoAprobado && pagoAprobado.id !== pago.id) {
-            return res.status(400).json({
-            success: false,
-            message: 'Este pedido ya tiene un pago aprobado'
-            });
-        }
-        }
-    }
-
-    await pago.update({
-        fecha: fecha ?? pago.fecha,
-        valor: valor ?? pago.valor,
-        metodo_pago: metodo_pago ?? pago.metodo_pago,
-        numero_referencia:
-        numero_referencia !== undefined
-            ? numero_referencia?.trim() || null
-            : pago.numero_referencia,
-        estado: estado ?? pago.estado
-    });
-
-    const pagoActualizado = await Pago.findByPk(id, {
-        include: {
-        model: Pedido,
-        as: 'pedido',
-        attributes: ['id', 'fecha', 'valor_total', 'estado']
-        }
-    });
-
-    res.status(200).json({
-        success: true,
-        message: 'Pago actualizado correctamente',
-        data: pagoActualizado
-    });
-    } catch (error) {
+  try {
+    const data = await pagoService.actualizar(req.params.id, req.body ?? {});
+    res.status(200).json({ success: true, message: 'Pago actualizado correctamente', data });
+  } catch (error) {
     next(error);
-    }
+  }
 };
 
 export const deletePago = async (req, res, next) => {
-    try {
-    const { id } = req.params;
-
-    const pago = await Pago.findByPk(id);
-
-    if (!pago) {
-        return res.status(404).json({
-        success: false,
-        message: 'Pago no encontrado'
-        });
-    }
-
-    await pago.destroy();
-
-    res.status(200).json({
-        success: true,
-        message: 'Pago eliminado correctamente'
-    });
-    } catch (error) {
+  try {
+    await pagoService.eliminar(req.params.id);
+    res.status(200).json({ success: true, message: 'Pago eliminado correctamente' });
+  } catch (error) {
     next(error);
-    }
+  }
 };

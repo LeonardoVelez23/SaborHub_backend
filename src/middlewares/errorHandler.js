@@ -1,3 +1,5 @@
+import { ErrorNegocio } from '../errors/ErrorNegocio.js';
+
 const MENSAJE_INTERNO = 'Error interno del servidor';
 
 /**
@@ -6,6 +8,11 @@ const MENSAJE_INTERNO = 'Error interno del servidor';
  * son 400; nunca se devuelve el texto interno de la base de datos.
  */
 const clasificar = (err) => {
+  // Reglas de negocio de los servicios: su mensaje es para el usuario,
+  // también en 502/503 (pasarela de pago caída o sin configurar).
+  if (err instanceof ErrorNegocio) {
+    return { status: err.status, message: err.message, publico: true };
+  }
   if (err.type === 'entity.parse.failed') {
     return { status: 400, message: 'El cuerpo de la petición no es un JSON válido' };
   }
@@ -39,14 +46,15 @@ const clasificar = (err) => {
 };
 
 export const errorHandler = (err, req, res, _next) => {
-  const { status, message } = clasificar(err);
+  const { status, message, publico = false } = clasificar(err);
   const enDesarrollo = process.env.NODE_ENV === 'development';
+  const interno = status >= 500 && !publico;
 
-  if (status >= 500) console.error(err);
+  if (interno) console.error(err);
 
   res.status(status).json({
     success: false,
-    message: status >= 500 && !enDesarrollo ? MENSAJE_INTERNO : message,
-    ...(enDesarrollo && status >= 500 && { stack: err.stack })
+    message: interno && !enDesarrollo ? MENSAJE_INTERNO : message,
+    ...(enDesarrollo && interno && { stack: err.stack })
   });
 };
