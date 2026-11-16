@@ -127,6 +127,8 @@ npm start
 
 ## Endpoints disponibles
 
+**Contrato completo (OpenAPI 3.1):** `src/docs/openapi.js`, servido en `GET /api/v1/openapi.json`. Para verlo, abrir https://editor.swagger.io → *File → Import URL* con `<servidor>/api/v1/openapi.json`. Incluye cuerpos, respuestas, roles (`x-roles`) y reglas de negocio (`x-reglas`). `tests/openapi.test.js` falla si una ruta de `src/routes` falta en el contrato o si el contrato tiene rutas que no existen: **al agregar o quitar un endpoint, actualizar `openapi.js`.**
+
 ### Health check
 
 ```http
