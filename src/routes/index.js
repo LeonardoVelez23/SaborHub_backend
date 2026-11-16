@@ -11,10 +11,13 @@ import legalRoutes from './legalRoutes.js';
 import privacidadRoutes from './privacidadRoutes.js';
 import perfilRoutes from './perfilRoutes.js';
 import carritoRoutes from './carritoRoutes.js';
+import { openapi } from '../docs/openapi.js';
 
 const router = Router();
 
 router.use('/', healthRoutes);
+// Contrato de la API (OpenAPI 3.1); se abre en https://editor.swagger.io.
+router.get('/openapi.json', (req, res) => res.json(openapi));
 router.use('/auth', authRoutes);
 router.use('/legal', legalRoutes);
 router.use('/privacidad', privacidadRoutes);
