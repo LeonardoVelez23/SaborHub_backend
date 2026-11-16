@@ -56,3 +56,42 @@ export const paginaResultadoPago = ({ tipo, titulo, mensaje, enlaceApp }) => {
 </body>
 </html>`;
 };
+
+/**
+ * Página intermedia que abre el formulario de Payphone desde nuestro
+ * dominio: Payphone solo acepta pagos cuyo Referer es el "Dominio web"
+ * registrado. Redirige sola (script con nonce) y deja un botón por si el
+ * navegador no lo hace.
+ */
+export const paginaIrAPago = ({ urlPago, nonce }) => {
+  const e = escaparHtml;
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="origin">
+<title>Ir al pago · Sabor Politécnico</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; min-height: 100vh; background: ${COLORES.fondo}; color: ${COLORES.texto};
+    font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { background: ${COLORES.accent}; color: #fff; padding: 20px 16px; font-weight: 700; font-size: 18px; text-align: center; }
+  header span { color: ${COLORES.naranja}; }
+  main { max-width: 440px; margin: 32px auto; padding: 32px 24px; background: ${COLORES.tarjeta};
+    border: 1px solid ${COLORES.borde}; border-radius: 16px; text-align: center; }
+  p { color: ${COLORES.textoSecundario}; margin: 0 0 24px; }
+  a.boton { display: block; padding: 14px; border-radius: 12px; background: ${COLORES.accent}; color: #fff;
+    text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>Sabor <span>Politécnico</span></header>
+<main>
+  <p>Te llevamos a la página segura de Payphone…</p>
+  <a class="boton" id="ir" href="${e(urlPago)}" referrerpolicy="origin">Continuar al pago</a>
+</main>
+<script nonce="${e(nonce)}">location.replace(document.getElementById('ir').href);</script>
+</body>
+</html>`;
+};

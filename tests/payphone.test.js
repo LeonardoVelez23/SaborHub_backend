@@ -58,7 +58,9 @@ describe('Pago con tarjeta por Payphone (RF-22)', () => {
     const res = await preparar();
 
     expect(res.status).toBe(201);
-    expect(res.body.data.url).toMatch(/^https:\/\/pay\.payphonetodoesposible\.com\/PayWithCard\//);
+    const ir = new URL(res.body.data.url);
+    expect(ir.origin + ir.pathname).toBe('https://prueba.ngrok-free.app/pagos/payphone/ir');
+    expect(ir.searchParams.get('u')).toMatch(/^https:\/\/pay\.payphonetodoesposible\.com\/PayWithCard\//);
     const [url, opciones] = fetch.mock.calls[0];
     expect(url).toBe('https://pay.payphonetodoesposible.com/api/button/Prepare');
     expect(opciones.headers.Authorization).toBe('Bearer tok');
@@ -202,6 +204,26 @@ describe('Pago con tarjeta por Payphone (RF-22)', () => {
     await retorno({ id: 5, clientTransactionId: tx });
 
     expect((await Pago.findOne()).estado).toBe('reembolsado');
+  });
+
+  it('la página intermedia abre Payphone desde nuestro dominio (Referer)', async () => {
+    const destino = 'https://pay.payphonetodoesposible.com/PayWithCard/abc';
+
+    const res = await api().get('/pagos/payphone/ir').query({ u: destino });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['referrer-policy']).toBe('origin');
+    const nonce = res.headers['content-security-policy'].match(/'nonce-([^']+)'/)[1];
+    expect(res.text).toContain(`<script nonce="${nonce}">`);
+    expect(res.text).toContain(`href="${destino}"`);
+  });
+
+  it('la página intermedia solo redirige a Payphone', async () => {
+    for (const u of ['https://otro.sitio/pago', 'http://pay.payphonetodoesposible.com/x', 'javascript:alert(1)', '']) {
+      const res = await api().get('/pagos/payphone/ir').query({ u });
+      expect(res.status).toBe(400);
+      expect(res.text).not.toContain('<script');
+    }
   });
 
   it('una transacción desconocida muestra un error', async () => {

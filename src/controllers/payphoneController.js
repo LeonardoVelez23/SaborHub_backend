@@ -8,7 +8,7 @@ import {
   payphoneConfigurado,
   prepararPago
 } from '../services/payphoneService.js';
-import { paginaResultadoPago } from '../legal/paginaPago.js';
+import { paginaIrAPago, paginaResultadoPago } from '../legal/paginaPago.js';
 
 /**
  * Pago con tarjeta por Payphone (RF-22).
@@ -93,11 +93,16 @@ export const prepararPagoPayphone = async (req, res, next) => {
       });
     }
 
+    // La app abre nuestra página intermedia (ver irAPagoPayphone), no el
+    // enlace de Payphone directamente.
+    const ir = new URL('/pagos/payphone/ir', config.payphone.responseUrl);
+    ir.searchParams.set('u', respuesta.payWithCard);
+
     res.status(201).json({
       success: true,
       message: 'Pago iniciado',
       data: {
-        url: respuesta.payWithCard,
+        url: ir.toString(),
         client_transaction_id: transaccion.client_tx_id
       }
     });
@@ -246,4 +251,44 @@ export const retornoPayphone = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+/** Solo se redirige a páginas de Payphone (evita una redirección abierta). */
+const esUrlDePayphone = (texto) => {
+  try {
+    const url = new URL(texto);
+    return (
+      url.protocol === 'https:' &&
+      (url.hostname === 'payphonetodoesposible.com' || url.hostname.endsWith('.payphonetodoesposible.com'))
+    );
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * GET /pagos/payphone/ir?u=<payWithCard>: Payphone rechaza ("No
+ * autorizado") los pagos que no llegan desde el "Dominio web" registrado,
+ * y lo comprueba con el Referer. Esta página, servida desde nuestro
+ * dominio con Referrer-Policy: origin, abre el formulario de Payphone.
+ */
+export const irAPagoPayphone = (req, res) => {
+  const { u } = req.query;
+  if (typeof u !== 'string' || !esUrlDePayphone(u)) {
+    return responderPagina(res, 400, {
+      tipo: 'error',
+      titulo: 'Enlace de pago no válido',
+      mensaje: 'Vuelve a la app e inténtalo de nuevo desde el detalle de tu pedido.'
+    });
+  }
+  const nonce = randomBytes(16).toString('base64');
+  res
+    .status(200)
+    .type('html')
+    .set({
+      'Cache-Control': 'no-store',
+      'Referrer-Policy': 'origin',
+      'Content-Security-Policy': `default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`
+    })
+    .send(paginaIrAPago({ urlPago: u, nonce }));
 };
