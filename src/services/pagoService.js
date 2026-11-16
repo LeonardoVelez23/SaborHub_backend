@@ -1,4 +1,5 @@
 import { ErrorNegocio } from '../errors/ErrorNegocio.js';
+import { RegistroDuplicado } from '../errors/RegistroDuplicado.js';
 
 export const METODOS_PAGO = ['efectivo', 'tarjeta', 'transferencia'];
 
@@ -99,7 +100,7 @@ export const crearPagoService = ({ pagos, pedidos }) => ({
       });
     } catch (error) {
       // Otro pago se registró al mismo tiempo (pedido_id es único).
-      if (error.name === 'SequelizeUniqueConstraintError') throw yaPagado;
+      if (error instanceof RegistroDuplicado) throw yaPagado;
       throw error;
     }
     return pagos.buscarConResumen(pago.id);

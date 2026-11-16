@@ -242,7 +242,7 @@ src/
   config/         # Variables de entorno y conexión a la base
   dependencias.js # Raíz de composición: une servicios con repositorios y pasarela
   controllers/    # Solo HTTP: leen la petición y responden
-  errors/         # ErrorNegocio (regla incumplida con su código HTTP)
+  errors/         # ErrorNegocio (regla incumplida con su código HTTP) y RegistroDuplicado
   legal/          # Textos legales y páginas HTML públicas
   middlewares/    # Token, roles, límites de peticiones, errores
   migrations/     # Esquema versionado (sequelize-cli)
@@ -268,17 +268,17 @@ Ruta (permisos) → Controlador (HTTP) → Servicio (reglas de negocio) → Repo
 | **S** — Responsabilidad única | El **controlador** solo traduce HTTP (lee `req`, responde `res`). El **servicio** aplica las reglas (RN-01 a RN-19) y abre las transacciones. El **repositorio** es el único que usa Sequelize. Las reglas sin base de datos (transiciones, stock, totales, fechas) son funciones puras en `services/reglasPedido.js`. |
 | **O** — Abierto/cerrado | `services/pasarelas/pasarelaPago.js` define el contrato `PasarelaPago` (`nombre`, `configurada`, `preparar`, `confirmar`). Payphone (`pasarelas/payphone.js`) es una implementación; otra pasarela se agrega sin tocar `pagoTarjetaService`. |
 | **L** — Sustitución de Liskov | Cualquier pasarela o repositorio que cumpla el contrato es intercambiable: los tests de `tests/unit/pagoTarjetaService.test.js` usan una pasarela falsa y repositorios en memoria. |
-| **I** — Segregación de interfaces | Repositorios pequeños por entidad (`pedidoRepository`, `pagoRepository`, `productoRepository`, `personasRepository`, `transaccionPagoRepository`), no uno genérico. |
+| **I** — Segregación de interfaces | Repositorios pequeños por entidad (`pedidoRepository`, `pagoRepository`, `productoRepository`, `categoriaRepository`, `personasRepository`, `transaccionPagoRepository`), no uno genérico. |
 | **D** — Inversión de dependencias | Cada servicio se crea con sus dependencias (`crearPedidoService({pedidos, productos, pagos, personas, transacciones, reloj})`). Solo `src/dependencias.js` conoce las implementaciones reales. |
 
-Errores: un servicio lanza `ErrorNegocio(mensaje, status)` y el `errorHandler` responde `{success: false, message}` con ese código (también 502/503, cuyo mensaje sí se muestra).
+Errores: un servicio lanza `ErrorNegocio(mensaje, status)` y el `errorHandler` responde `{success: false, message}` con ese código (también 502/503, cuyo mensaje sí se muestra). Un valor único repetido llega de los repositorios como `RegistroDuplicado` (nunca el error de Sequelize) y cada servicio lo convierte en su mensaje ("Ya existe un producto con ese código").
 
 ### Plan de migración
 
 Módulo por módulo y **sin cambiar la API** (rutas, permisos y respuestas iguales; la app y el módulo de administración no lo notan). Los tests de integración existentes deben seguir en verde en cada paso.
 
 1. Pedidos y pagos (lo más complejo; incluye `PasarelaPago`). **Hecho.**
-2. Productos y categorías.
+2. Productos y categorías. **Hecho.**
 3. Clientes, empleados, perfil y privacidad.
 
 Esta separación también prepara el soporte de **varios restaurantes**: el filtro por restaurante se aplica en los repositorios, en un solo lugar.

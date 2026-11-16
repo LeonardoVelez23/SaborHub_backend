@@ -1,4 +1,5 @@
 import { ErrorNegocio } from '../errors/ErrorNegocio.js';
+import { RegistroDuplicado } from '../errors/RegistroDuplicado.js';
 
 const MENSAJE_INTERNO = 'Error interno del servidor';
 
@@ -13,6 +14,7 @@ const clasificar = (err) => {
   if (err instanceof ErrorNegocio) {
     return { status: err.status, message: err.message, publico: true };
   }
+  if (err instanceof RegistroDuplicado) return { status: 400, message: err.message };
   if (err.type === 'entity.parse.failed') {
     return { status: 400, message: 'El cuerpo de la petición no es un JSON válido' };
   }

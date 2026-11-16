@@ -4,11 +4,14 @@ import * as modelos from './models/index.js';
 import { crearTransacciones } from './repositories/transacciones.js';
 import { crearPedidoRepository } from './repositories/pedidoRepository.js';
 import { crearProductoRepository } from './repositories/productoRepository.js';
+import { crearCategoriaRepository } from './repositories/categoriaRepository.js';
 import { crearPagoRepository } from './repositories/pagoRepository.js';
 import { crearPersonasRepository } from './repositories/personasRepository.js';
 import { crearTransaccionPagoRepository } from './repositories/transaccionPagoRepository.js';
 import { crearPedidoService } from './services/pedidoService.js';
 import { crearPagoService } from './services/pagoService.js';
+import { crearProductoService } from './services/productoService.js';
+import { crearCategoriaService } from './services/categoriaService.js';
 import { crearPagoTarjetaService } from './services/pagoTarjetaService.js';
 import { crearPasarelaPayphone } from './services/pasarelas/payphone.js';
 import { ahoraLocal } from './utils/reloj.js';
@@ -25,6 +28,7 @@ const transacciones = crearTransacciones(modelos);
 const repositorios = {
   pedidos: crearPedidoRepository(modelos),
   productos: crearProductoRepository(modelos),
+  categorias: crearCategoriaRepository(modelos),
   pagos: crearPagoRepository(modelos),
   personas: crearPersonasRepository(modelos),
   intentos: crearTransaccionPagoRepository(modelos)
@@ -40,6 +44,10 @@ export const pedidoService = crearPedidoService({
 });
 
 export const pagoService = crearPagoService(repositorios);
+
+export const productoService = crearProductoService(repositorios);
+
+export const categoriaService = crearCategoriaService(repositorios);
 
 export const pagoTarjetaService = crearPagoTarjetaService({
   pasarela,

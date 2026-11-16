@@ -1,3 +1,5 @@
+import { sinDuplicados } from '../errors/RegistroDuplicado.js';
+
 const PEDIDO_RESUMEN = ['id', 'fecha', 'valor_total', 'estado'];
 
 /** Acceso a Pagos. */
@@ -67,7 +69,7 @@ export const crearPagoRepository = (m) => ({
   bloquearDelPedido: (pedidoId, t) =>
     m.Pago.findOne({ where: { pedido_id: pedidoId }, lock: t.LOCK.UPDATE, transaction: t }),
 
-  crear: (datos, t) => (t ? m.Pago.create(datos, { transaction: t }) : m.Pago.create(datos)),
+  crear: (datos, t) => sinDuplicados(() => (t ? m.Pago.create(datos, { transaction: t }) : m.Pago.create(datos))),
 
   actualizar: (pago, datos, t) => (t ? pago.update(datos, { transaction: t }) : pago.update(datos)),
 
