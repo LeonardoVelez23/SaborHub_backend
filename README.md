@@ -176,6 +176,10 @@ DELETE /api/v1/perfil/foto
 
 La foto se guarda en la tabla `FotosPerfil` (una por cliente, con RLS), se incluye en `GET /privacidad/mis-datos` y se borra al eliminar la cuenta. El tipo se detecta por los bytes, no por lo que diga el cliente.
 
+### Mis pagos (app móvil)
+
+`GET /api/v1/pagos/mios` (solo cliente): sus pagos registrados, del más reciente al más antiguo, con el pedido (`id`, `fecha`, `hora`, `estado`, `valor_total`). No incluye los intentos con tarjeta cancelados o rechazados.
+
 ### Pago con tarjeta por Payphone (RF-22)
 
 Flujo (botón de pago por redirección de Payphone, ambiente de **pruebas**: no hay cobros reales):

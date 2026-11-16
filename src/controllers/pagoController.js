@@ -25,6 +25,34 @@ export const getAllPagos = async (req, res, next) => {
     }
 };
 
+/**
+ * Pagos del cliente de la sesión (historial "Mis pagos" de la app), del
+ * más reciente al más antiguo. Solo pagos registrados: los intentos con
+ * tarjeta cancelados o rechazados en Payphone no son pagos.
+ */
+export const getMisPagos = async (req, res, next) => {
+    try {
+    const pagos = await Pago.findAll({
+        attributes: ['id', 'fecha', 'valor', 'metodo_pago', 'numero_referencia', 'estado'],
+        include: {
+        model: Pedido,
+        as: 'pedido',
+        attributes: ['id', 'fecha', 'hora', 'estado', 'valor_total'],
+        where: { cliente_id: req.user.id },
+        required: true
+        },
+        order: [['fecha', 'DESC'], ['id', 'DESC']]
+    });
+
+    res.status(200).json({
+        success: true,
+        data: pagos
+    });
+    } catch (error) {
+    next(error);
+    }
+};
+
 export const getPagoById = async (req, res, next) => {
     try {
     const { id } = req.params;
