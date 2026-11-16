@@ -27,7 +27,7 @@
  * responsable del restaurante, y un abogado debe revisar el texto antes de
  * publicar la app en las tiendas.
  */
-export const VERSION_LEGAL = '2026-11-16.3';
+export const VERSION_LEGAL = '2026-11-16.4';
 
 export const RESPONSABLE = {
   nombre: 'Sabor Politécnico, restaurante universitario',
@@ -185,7 +185,7 @@ const privacidad = {
         'Identificación y contacto: número de cédula, RUC o pasaporte; nombres; apellidos; correo electrónico; teléfono (opcional); y tipo de cliente (estudiante, docente, personal administrativo o persona externa).',
         'Cuenta: la contraseña, guardada con cifrado irreversible (nadie puede leerla, ni siquiera el personal), y la versión y la fecha en que aceptaste estos documentos.',
         'Foto de perfil: solo si decides subirla. Es opcional.',
-        'Pedidos y pagos: productos, cantidades, precios, fecha, hora, modalidad y estado de cada pedido; valor, método, estado y número de referencia de cada pago. En los pagos con tarjeta recibimos de Payphone solo el número de la transacción, el código de autorización, el monto y el resultado; nunca el número de la tarjeta, su fecha de vencimiento ni su código de seguridad.',
+        'Carrito, pedidos y pagos: los productos y cantidades que dejas en tu carrito (para que no se pierdan al cerrar la aplicación o cambiar de teléfono); productos, cantidades, precios, fecha, hora, modalidad y estado de cada pedido; valor, método, estado y número de referencia de cada pago. En los pagos con tarjeta recibimos de Payphone solo el número de la transacción, el código de autorización, el monto y el resultado; nunca el número de la tarjeta, su fecha de vencimiento ni su código de seguridad.',
         'Seguridad: los códigos de un solo uso para recuperar o cambiar tu contraseña (guardados cifrados; vencen a los 15 minutos) y, si activas el ingreso con huella o rostro, una credencial del dispositivo (guardada cifrada), el nombre del tipo de teléfono y la fecha de su último uso.',
         'Datos técnicos: la dirección IP, la fecha y la hora de las solicitudes que la aplicación hace al servidor, que quedan en sus registros de funcionamiento.',
         'En tu teléfono, protegidos por el sistema operativo, se guardan el código de tu sesión, la hora de tu último uso y, si la activas, la credencial del ingreso con huella o rostro.'
@@ -240,6 +240,7 @@ const privacidad = {
         'Conservamos los datos solo el tiempo necesario para la finalidad con la que se recogieron (LOPDP, art. 10, principio de conservación):',
         'Datos de tu cuenta y foto de perfil: mientras tu cuenta esté activa. Al eliminarla se borran de inmediato.',
         'Pedidos y pagos: el plazo que exigen las normas tributarias y contables. Si eliminas tu cuenta, se conservan sin ningún dato que te identifique.',
+        'Carrito: hasta que haces el pedido, lo vacías o eliminas tu cuenta.',
         'Códigos para recuperar la contraseña: hasta que se usan o vencen (15 minutos).',
         'Credencial del ingreso con huella o rostro: hasta que lo desactivas, cambias tu contraseña o eliminas tu cuenta, o tras 30 días sin usarse.',
         'Registros técnicos del servidor: el tiempo que los mantiene el proveedor del servidor para su funcionamiento y seguridad.'
@@ -305,7 +306,7 @@ export const ELIMINAR_CUENTA = {
     {
       titulo: 'Qué se elimina y qué se conserva',
       parrafos: [
-        'Se eliminan tu identificación, nombres, apellidos, correo electrónico, teléfono, foto de perfil, contraseña y el ingreso con huella o rostro de tus dispositivos. Ya no podrás iniciar sesión con esa cuenta.',
+        'Se eliminan tu identificación, nombres, apellidos, correo electrónico, teléfono, foto de perfil, carrito, contraseña y el ingreso con huella o rostro de tus dispositivos. Ya no podrás iniciar sesión con esa cuenta.',
         'Los pedidos y pagos se conservan sin ningún dato que te identifique, por las obligaciones contables y tributarias del restaurante.'
       ]
     }

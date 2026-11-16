@@ -9,6 +9,7 @@ import Pago from './Pago.js';
 import FotoPerfil from './FotoPerfil.js';
 import TransaccionPayphone from './TransaccionPayphone.js';
 import CredencialBiometrica from './CredencialBiometrica.js';
+import CarritoItem from './CarritoItem.js';
 
 // --- Asociaciones ---
 
@@ -66,6 +67,12 @@ TransaccionPayphone.belongsTo(Pedido, { foreignKey: 'pedido_id', as: 'pedido' })
 Cliente.hasMany(CredencialBiometrica, { foreignKey: 'cliente_id', as: 'credencialesBiometricas', onDelete: 'CASCADE' });
 CredencialBiometrica.belongsTo(Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
 
+// Cliente <-> CarritoItem (carrito guardado en el servidor, RF-13)
+Cliente.hasMany(CarritoItem, { foreignKey: 'cliente_id', as: 'carrito', onDelete: 'CASCADE' });
+CarritoItem.belongsTo(Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
+Producto.hasMany(CarritoItem, { foreignKey: 'producto_id', as: 'enCarritos', onDelete: 'CASCADE' });
+CarritoItem.belongsTo(Producto, { foreignKey: 'producto_id', as: 'producto' });
+
 // Al cambiar la contraseña (también al restablecerla o eliminar la cuenta)
 // se revoca el ingreso con huella en todos los dispositivos.
 Cliente.addHook('afterUpdate', async (cliente, options) => {
@@ -89,5 +96,6 @@ export {
   Pago,
   FotoPerfil,
   TransaccionPayphone,
-  CredencialBiometrica
+  CredencialBiometrica,
+  CarritoItem
 };

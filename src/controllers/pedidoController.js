@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Pedido, DetallePedido, Cliente, Empleado, Producto, Categoria, Pago, sequelize } from '../models/index.js';
+import { Pedido, DetallePedido, Cliente, Empleado, Producto, Categoria, Pago, CarritoItem, sequelize } from '../models/index.js';
 import { ErrorNegocio, agruparDetalles, devolverStock, reservarStock } from '../services/stockService.js';
 import { ahoraLocal } from '../utils/reloj.js';
 
@@ -171,6 +171,10 @@ export const createPedido = async (req, res, next) => {
             lineas.map((linea) => ({ ...linea, pedido_id: pedido.id })),
             { transaction: t }
         );
+        // El cliente pidió lo que tenía en el carrito: se vacía con el pedido.
+        if (esCliente) {
+            await CarritoItem.destroy({ where: { cliente_id: cliente.id }, transaction: t });
+        }
 
         await t.commit();
 

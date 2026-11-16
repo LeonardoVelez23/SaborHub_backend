@@ -31,6 +31,9 @@ vi.mock('../../src/models/index.js', () => {
       create: vi.fn(),
       count: vi.fn().mockResolvedValue(10)
     },
+    CarritoItem: {
+      destroy: vi.fn().mockResolvedValue(0)
+    },
     DetallePedido: {
       findAll: vi.fn().mockResolvedValue([]),
       bulkCreate: vi.fn().mockResolvedValue([]),

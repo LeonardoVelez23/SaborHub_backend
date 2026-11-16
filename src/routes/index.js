@@ -10,6 +10,7 @@ import authRoutes from './authRoutes.js';
 import legalRoutes from './legalRoutes.js';
 import privacidadRoutes from './privacidadRoutes.js';
 import perfilRoutes from './perfilRoutes.js';
+import carritoRoutes from './carritoRoutes.js';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.use('/auth', authRoutes);
 router.use('/legal', legalRoutes);
 router.use('/privacidad', privacidadRoutes);
 router.use('/perfil', perfilRoutes);
+router.use('/carrito', carritoRoutes);
 router.use('/categorias', categoriaRoutes);
 router.use('/productos', productoRoutes);
 router.use('/clientes', clienteRoutes);

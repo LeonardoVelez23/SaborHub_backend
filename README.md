@@ -187,6 +187,17 @@ DELETE /api/v1/perfil/foto
 
 La foto se guarda en la tabla `FotosPerfil` (una por cliente, con RLS), se incluye en `GET /privacidad/mis-datos` y se borra al eliminar la cuenta. El tipo se detecta por los bytes, no por lo que diga el cliente.
 
+### Carrito del cliente (app móvil, RF-13)
+
+El carrito se guarda en el servidor (tabla `CarritoItems`): no se pierde al cerrar la app ni al cambiar de teléfono. Solo para el rol `cliente`.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/v1/carrito` | `{items: [{producto_id, cantidad, producto: {id, nombre, precio, cantidad_disponible, estado, imagen_codigo}}]}` en el orden en que se agregaron |
+| PUT | `/api/v1/carrito` | Reemplaza el carrito completo: `{items: [{producto_id, cantidad}]}` (cantidad entera 1–50, sin repetir productos, máx. 100). Los productos que ya no existen se ignoran |
+
+El stock y la disponibilidad se validan al crear el pedido, no al guardar el carrito. `POST /pedidos` hecho por el cliente vacía su carrito en la misma transacción (un pedido del personal a su nombre no lo toca). El carrito aparece en `GET /privacidad/mis-datos` y se borra al eliminar la cuenta.
+
 ### Mis pagos (app móvil)
 
 `GET /api/v1/pagos/mios` (solo cliente): sus pagos registrados, del más reciente al más antiguo, con el pedido (`id`, `fecha`, `hora`, `estado`, `valor_total`). No incluye los intentos con tarjeta cancelados o rechazados.

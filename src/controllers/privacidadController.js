@@ -9,6 +9,7 @@ import {
   Producto,
   Pago,
   FotoPerfil,
+  CarritoItem,
   sequelize
 } from '../models/index.js';
 
@@ -30,6 +31,11 @@ export const getMisDatos = async (req, res, next) => {
       where: { cliente_id: cliente.id },
       attributes: ['dispositivo', 'createdAt', 'ultimo_uso'],
       order: [['ultimo_uso', 'DESC']]
+    });
+    const carrito = await CarritoItem.findAll({
+      where: { cliente_id: cliente.id },
+      include: { model: Producto, as: 'producto', attributes: ['nombre'] },
+      order: [['posicion', 'ASC']]
     });
     const pedidos = await Pedido.findAll({
       where: { cliente_id: cliente.id },
@@ -73,6 +79,11 @@ export const getMisDatos = async (req, res, next) => {
           dispositivo: d.dispositivo,
           activado_en: d.createdAt,
           ultimo_uso: d.ultimo_uso
+        })),
+        carrito: carrito.map((item) => ({
+          producto: item.producto?.nombre ?? null,
+          cantidad: item.cantidad,
+          agregado_en: item.createdAt
         })),
         aceptacion_legal: cliente.legal_version
           ? { version: cliente.legal_version, aceptado_en: cliente.legal_aceptado_en }
@@ -135,6 +146,7 @@ export const eliminarMiCuenta = async (req, res, next) => {
       }
 
       await FotoPerfil.destroy({ where: { cliente_id: cliente.id }, transaction });
+      await CarritoItem.destroy({ where: { cliente_id: cliente.id }, transaction });
       const marca = `ELIMINADO-${cliente.id}`;
       await cliente.update(
         {
