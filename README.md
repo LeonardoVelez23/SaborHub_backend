@@ -42,7 +42,7 @@ PORT=3000
 NODE_ENV=development
 JWT_SECRET=<cadena aleatoria larga>
 DATABASE_URL=postgresql://...
-CORS_ORIGIN=https://saborpolitecnico.netlify.app
+CORS_ORIGIN=https://admin.saborpolitecnico.com
 APP_TIMEZONE=America/Guayaquil
 ```
 
@@ -50,7 +50,7 @@ APP_TIMEZONE=America/Guayaquil
 - `NODE_ENV`: entorno de ejecución (`development`, `production`, etc.)
 - `JWT_SECRET`: obligatorio; sin él la API no arranca
 - `JWT_EXPIRES_CLIENTE` (por defecto `20m`) y `JWT_EXPIRES_PERSONAL` (por defecto `8h`): duración de la sesión, fija desde el login. Al vencer, el cliente vuelve a iniciar sesión (la app además la cierra tras unos minutos sin uso).
-- `CORS_ORIGIN`: dominios web permitidos, separados por coma. Vacío: cualquiera en desarrollo y ninguno en producción. La app móvil no lo necesita.
+- `CORS_ORIGIN`: dominio(s) del módulo de administración web (`SaborpolitecnicoAdmin`), separados por coma. Vacío: cualquiera en desarrollo y ninguno en producción. La app móvil no lo necesita.
 - `APP_TIMEZONE`: zona horaria de la fecha y hora de los pedidos (por defecto `America/Guayaquil`)
 
 Ver `.env.example` para el correo (Brevo/SMTP).
@@ -272,7 +272,7 @@ Ya van en esa dirección `stockService`, `otpService`, `sesionService` y `paypho
 
 ### Plan de migración
 
-Módulo por módulo y **sin cambiar la API** (rutas, permisos y respuestas iguales; la app y el panel web no lo notan). Los tests de integración existentes deben seguir en verde en cada paso.
+Módulo por módulo y **sin cambiar la API** (rutas, permisos y respuestas iguales; la app y el módulo de administración no lo notan). Los tests de integración existentes deben seguir en verde en cada paso.
 
 1. Pedidos y pagos (lo más complejo; incluye `PasarelaPago`).
 2. Productos y categorías.
@@ -296,7 +296,7 @@ El backend corre en Railway y usa la base de datos de Supabase (Supabase solo gu
    - `NODE_ENV=production`
    - `DATABASE_URL`: la misma de Supabase del `.env` (pooler, puerto 5432).
    - `JWT_SECRET`: uno nuevo y largo (no el de desarrollo).
-   - `CORS_ORIGIN`: dominios de la web separados por coma (la app móvil no lo necesita).
+   - `CORS_ORIGIN`: dominio(s) del módulo de administración separados por coma (la app móvil no lo necesita).
    - Correo: `BREVO_API_KEY` o `SMTP_*`, y `EMAIL_FROM`.
    - Payphone: `PAYPHONE_TOKEN`, `PAYPHONE_STORE_ID` y `PAYPHONE_RESPONSE_URL=https://<dominio-railway>/pagos/payphone/retorno`.
    - `PORT` no se configura: lo pone Railway.
