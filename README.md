@@ -185,7 +185,7 @@ Flujo (botón de pago por redirección de Payphone, ambiente de **pruebas**: no 
 3. Payphone devuelve al navegador a `GET /pagos/payphone/retorno?id=&clientTransactionId=` (fuera de `/api/v1`). El backend confirma con Payphone (`/api/button/V2/Confirm`, antes de 5 minutos o Payphone lo revierte), verifica el monto y registra el `Pago` como `aprobado` (`tarjeta`, referencia `Payphone <id>`). Si el pedido se canceló mientras pagaba, queda `reembolsado`.
 4. La página tiene el botón "Volver a la app" (`saborpolitecnico://app/pedidos/<id>`).
 
-Configuración (`.env`): `PAYPHONE_TOKEN`, `PAYPHONE_STORE_ID` y `PAYPHONE_RESPONSE_URL` (ver `.env.example`). Sin ellos `preparar` responde 503.
+Configuración (`.env`): `PAYPHONE_TOKEN` y `PAYPHONE_RESPONSE_URL` (sin ellos `preparar` responde 503) y, opcional, `PAYPHONE_STORE_ID` (sin él, Payphone usa la tienda del token). Ver `.env.example`.
 
 En Payphone Developer: aplicación **WEB** en ambiente **PRUEBAS**, con el dominio público del backend y la URL de respuesta `<dominio>/pagos/payphone/retorno`. En desarrollo el backend local se expone con ngrok:
 

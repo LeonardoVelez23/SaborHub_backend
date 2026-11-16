@@ -75,6 +75,14 @@ describe('Pago con tarjeta por Payphone (RF-22)', () => {
     expect(await TransaccionPayphone.count()).toBe(1);
   });
 
+  it('sin StoreID no lo envía (Payphone usa la tienda del token)', async () => {
+    config.payphone.storeId = '';
+    const fetch = simularPayphone();
+
+    expect((await preparar()).status).toBe(201);
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).not.toHaveProperty('storeId');
+  });
+
   it('sin credenciales de Payphone responde 503', async () => {
     config.payphone.token = '';
     const res = await preparar();

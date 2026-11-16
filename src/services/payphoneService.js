@@ -20,9 +20,10 @@ export class ErrorPayphone extends Error {
 /** Estado de una transacción en la respuesta de Confirm. */
 export const ESTADO_PAYPHONE = { CANCELADA: 2, APROBADA: 3 };
 
+// El StoreID es opcional: sin él, Payphone usa la tienda del Token.
 export const payphoneConfigurado = () => {
-  const { token, storeId, responseUrl } = config.payphone;
-  return Boolean(token && storeId && responseUrl);
+  const { token, responseUrl } = config.payphone;
+  return Boolean(token && responseUrl);
 };
 
 /** Dólares → centavos sin errores de coma flotante (2.675 → 268). */
@@ -68,7 +69,7 @@ export const prepararPago = ({ clientTransactionId, centavos, referencia }) => {
     amountWithoutTax: centavos,
     currency: 'USD',
     clientTransactionId,
-    storeId,
+    ...(storeId ? { storeId } : {}),
     reference: referencia,
     responseUrl,
     cancellationUrl: cancelacion.toString(),

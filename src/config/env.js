@@ -27,8 +27,8 @@ export const config = {
   smtpPass: process.env.SMTP_PASS || '',
   emailFrom: process.env.EMAIL_FROM || '"Sabor Politécnico" <no-reply@saborpolitecnico.com>',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:4200',
-  // Pago con tarjeta (RF-22). Sin token, StoreID y URL de respuesta el pago
-  // con tarjeta queda desactivado (la API responde 503).
+  // Pago con tarjeta (RF-22). Sin token y URL de respuesta el pago con
+  // tarjeta queda desactivado (la API responde 503). StoreID es opcional.
   payphone: {
     apiUrl: process.env.PAYPHONE_API_URL || 'https://pay.payphonetodoesposible.com',
     token: process.env.PAYPHONE_TOKEN || '',
