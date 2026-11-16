@@ -1,7 +1,16 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Op } from 'sequelize';
-import { Cliente, Pedido, DetallePedido, Producto, Pago, FotoPerfil, sequelize } from '../models/index.js';
+import {
+  Cliente,
+  CredencialBiometrica,
+  Pedido,
+  DetallePedido,
+  Producto,
+  Pago,
+  FotoPerfil,
+  sequelize
+} from '../models/index.js';
 
 const ESTADOS_FINALES = ['entregado', 'cancelado'];
 
@@ -17,6 +26,11 @@ export const getMisDatos = async (req, res, next) => {
     }
 
     const foto = await FotoPerfil.findByPk(cliente.id);
+    const dispositivos = await CredencialBiometrica.findAll({
+      where: { cliente_id: cliente.id },
+      attributes: ['dispositivo', 'createdAt', 'ultimo_uso'],
+      order: [['ultimo_uso', 'DESC']]
+    });
     const pedidos = await Pedido.findAll({
       where: { cliente_id: cliente.id },
       attributes: ['id', 'fecha', 'hora', 'modalidad', 'estado', 'valor_total'],
@@ -54,6 +68,12 @@ export const getMisDatos = async (req, res, next) => {
               imagen_base64: Buffer.from(foto.datos).toString('base64')
             }
           : null,
+        // Sin la credencial: solo qué dispositivos tienen el ingreso con huella.
+        ingreso_biometrico: dispositivos.map((d) => ({
+          dispositivo: d.dispositivo,
+          activado_en: d.createdAt,
+          ultimo_uso: d.ultimo_uso
+        })),
         aceptacion_legal: cliente.legal_version
           ? { version: cliente.legal_version, aceptado_en: cliente.legal_aceptado_en }
           : null,

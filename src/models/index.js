@@ -8,6 +8,7 @@ import DetallePedido from './DetallePedido.js';
 import Pago from './Pago.js';
 import FotoPerfil from './FotoPerfil.js';
 import TransaccionPayphone from './TransaccionPayphone.js';
+import CredencialBiometrica from './CredencialBiometrica.js';
 
 // --- Asociaciones ---
 
@@ -61,6 +62,21 @@ FotoPerfil.belongsTo(Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
 Pedido.hasMany(TransaccionPayphone, { foreignKey: 'pedido_id', as: 'transaccionesPayphone', onDelete: 'CASCADE' });
 TransaccionPayphone.belongsTo(Pedido, { foreignKey: 'pedido_id', as: 'pedido' });
 
+// Cliente <-> CredencialBiometrica (ingreso con huella, uno por dispositivo)
+Cliente.hasMany(CredencialBiometrica, { foreignKey: 'cliente_id', as: 'credencialesBiometricas', onDelete: 'CASCADE' });
+CredencialBiometrica.belongsTo(Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
+
+// Al cambiar la contraseña (también al restablecerla o eliminar la cuenta)
+// se revoca el ingreso con huella en todos los dispositivos.
+Cliente.addHook('afterUpdate', async (cliente, options) => {
+  if (cliente.changed('contrasenia')) {
+    await CredencialBiometrica.destroy({
+      where: { cliente_id: cliente.id },
+      transaction: options.transaction
+    });
+  }
+});
+
 // Exportar todos los modelos y la conexión
 export {
   sequelize,
@@ -72,5 +88,6 @@ export {
   DetallePedido,
   Pago,
   FotoPerfil,
-  TransaccionPayphone
+  TransaccionPayphone,
+  CredencialBiometrica
 };

@@ -165,6 +165,16 @@ DELETE /api/v1/privacidad/mi-cuenta   # (cliente) body {contrasenia}: elimina su
 
 Eliminar la cuenta reemplaza identificación, nombres, correo, teléfono y contraseña, y marca `eliminado_en`; los pedidos y pagos se conservan anónimos. No se permite con pedidos en curso. El token deja de servir en la siguiente petición.
 
+### Ingreso con huella o rostro (app móvil)
+
+| Método | Ruta | Acceso |
+| --- | --- | --- |
+| POST | `/auth/biometrico/activar` `{dispositivo}` | cliente: devuelve `data.credencial` (`<id>.<secreto>`) |
+| POST | `/auth/biometrico` `{credencial}` | público (con límite): devuelve `token`, `user` y una `credencial` nueva |
+| DELETE | `/auth/biometrico` `{credencial}` | cliente: desactiva ese dispositivo |
+
+La huella la verifica el teléfono; el backend nunca la recibe. Solo se guarda el SHA-256 del secreto (`CredencialesBiometricas`), que cambia en cada ingreso. La credencial vence tras 30 días sin usarse, se revoca al cambiar la contraseña o eliminar la cuenta, y hay como máximo 5 dispositivos por cliente.
+
 ### Perfil del cliente (app móvil)
 
 ```http

@@ -11,7 +11,7 @@
  * BORRADOR: los datos entre corchetes los debe completar el responsable del
  * restaurante, y el texto debe revisarlo un asesor legal antes de publicar.
  */
-export const VERSION_LEGAL = '2026-11-13';
+export const VERSION_LEGAL = '2026-11-16';
 
 export const RESPONSABLE = {
   nombre: 'Sabor Politécnico, restaurante universitario',
@@ -105,7 +105,8 @@ const privacidad = {
         'Foto de perfil, solo si decides subirla. Es opcional, solo la ves tú en la aplicación y puedes cambiarla o quitarla cuando quieras.',
         'Datos de uso del servicio: pedidos, productos, fechas, montos, estado y método de pago, y número de referencia cuando aplica.',
         'Datos de seguridad: tu contraseña, que se guarda cifrada de forma irreversible, y los códigos temporales de recuperación.',
-        'No tratamos datos sensibles ni guardamos datos de tarjetas de pago.'
+        'Ingreso con huella o rostro, solo si lo activas en la aplicación: tu huella o tu rostro los verifica el sistema de tu teléfono y nunca llegan a la plataforma. Guardamos solo una credencial cifrada del dispositivo, el nombre del modelo del teléfono y la fecha del último uso. Puedes desactivarlo cuando quieras; se revoca al cambiar tu contraseña y vence tras 30 días sin usarse.',
+        'No tratamos datos sensibles (incluidos datos biométricos) ni guardamos datos de tarjetas de pago.'
       ]
     },
     {
@@ -196,7 +197,7 @@ export const ELIMINAR_CUENTA = {
     {
       titulo: 'Qué se elimina y qué se conserva',
       parrafos: [
-        'Se eliminan tu identificación, nombres, apellidos, correo electrónico, teléfono, foto de perfil y contraseña. Ya no podrás iniciar sesión con esa cuenta.',
+        'Se eliminan tu identificación, nombres, apellidos, correo electrónico, teléfono, foto de perfil, contraseña y el ingreso con huella o rostro de tus dispositivos. Ya no podrás iniciar sesión con esa cuenta.',
         'Los pedidos y pagos se conservan sin datos que te identifiquen, por las obligaciones contables y tributarias del restaurante.'
       ]
     }

@@ -36,3 +36,5 @@ export const loginLimiter = createAuthLimiter({ max: 10 });
 export const forgotPasswordLimiter = createAuthLimiter({ max: 5, porCorreo: true });
 // Usar OTP: por correo. Además, el OTP se invalida tras 5 intentos fallidos.
 export const resetPasswordLimiter = createAuthLimiter({ max: 10, porCorreo: true });
+// Ingreso con huella: por IP (no lleva correo).
+export const biometricoLimiter = createAuthLimiter({ max: 20 });

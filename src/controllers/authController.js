@@ -1,12 +1,12 @@
 import { Cliente, Empleado } from '../models/index.js';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { Op } from 'sequelize';
 import { sendPasswordResetEmail } from '../services/emailService.js';
 import { config } from '../config/env.js';
 import { emitirOtp, verificarOtp, otpLimpio } from '../services/otpService.js';
 import { errorDeContrasenia } from '../utils/password.js';
 import { rolDeCargo } from '../utils/roles.js';
+import { emitirToken } from '../utils/sesion.js';
 
 const buscarPorCorreo = async (correo) =>
   (await Cliente.findOne({ where: { correo_electronico: correo } })) ??
@@ -64,18 +64,7 @@ export const login = async (req, res, next) => {
       });
     }
 
-    const token = jwt.sign(
-      {
-        id: user.id,
-        identificacion: user.identificacion,
-        nombres: user.nombres,
-        apellidos: user.apellidos,
-        correo_electronico: user.correo_electronico,
-        rol: role
-      },
-      config.jwtSecret,
-      { expiresIn: role === 'cliente' ? config.sesionCliente : config.sesionPersonal }
-    );
+    const token = emitirToken(user, role);
 
     const userData = user.toJSON();
     delete userData.contrasenia;
