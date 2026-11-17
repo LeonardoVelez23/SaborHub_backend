@@ -17,6 +17,8 @@ import { crearCuentaRepository } from './repositories/cuentaRepository.js';
 import { crearCredencialRepository } from './repositories/credencialRepository.js';
 import { crearCarritoRepository } from './repositories/carritoRepository.js';
 import { crearSucursalRepository } from './repositories/sucursalRepository.js';
+import { crearRestauranteRepository } from './repositories/restauranteRepository.js';
+import { crearRestauranteService, crearSucursalService } from './services/restauranteService.js';
 import { crearPedidoService } from './services/pedidoService.js';
 import { crearPagoService } from './services/pagoService.js';
 import { crearProductoService } from './services/productoService.js';
@@ -62,7 +64,8 @@ const repositorios = {
   cuentas: crearCuentaRepository(modelos),
   credenciales: crearCredencialRepository(modelos),
   carritos: crearCarritoRepository(modelos),
-  sucursales: crearSucursalRepository(modelos)
+  sucursales: crearSucursalRepository(modelos),
+  restaurantes: crearRestauranteRepository(modelos)
 };
 
 const contrasenias = crearContrasenias(bcrypt);
@@ -132,3 +135,7 @@ export const authService = crearAuthService({
 export const biometricoService = crearBiometricoService({ ...repositorios, emitirToken });
 
 export const carritoService = crearCarritoService({ ...repositorios, transacciones });
+
+export const restauranteService = crearRestauranteService(repositorios);
+
+export const sucursalService = crearSucursalService({ ...repositorios, reloj: () => ahoraLocal() });

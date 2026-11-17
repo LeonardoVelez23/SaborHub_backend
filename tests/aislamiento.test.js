@@ -38,6 +38,17 @@ describe('Aislamiento por restaurante y sucursal', () => {
     expect((await api().put(`/api/v1/pagos/${pagoB.id}`).set(auth(token)).send({ estado: 'aprobado' })).status).toBe(404);
   });
 
+  it('un cajero de A no registra pedidos con productos de B', async () => {
+    const token = await login(await empleadoDe('cajero', A));
+    const productoB = await crearProducto({ sucursal_id: B.id });
+    const res = await api()
+      .post('/api/v1/pedidos')
+      .set(auth(token))
+      .send({ modalidad: 'presencial', cliente_id: cliente.id, detalles: [{ producto_id: productoB.id, cantidad: 1 }] });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Los productos del pedido no son de tu sucursal');
+  });
+
   it('un cajero de A no modifica productos de B y las estadísticas son solo de A', async () => {
     const token = await login(await empleadoDe('cajero', A));
     const productoB = await crearProducto({ sucursal_id: B.id });

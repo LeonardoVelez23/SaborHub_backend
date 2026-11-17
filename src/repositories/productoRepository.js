@@ -1,5 +1,5 @@
 import { sinDuplicados } from '../errors/RegistroDuplicado.js';
-import { filtroSucursal } from './alcance.js';
+import { filtroSucursal, porId } from './alcance.js';
 
 /** Acceso a Productos: catálogo y stock. `m` son los modelos (se leen al usarse). */
 export const crearProductoRepository = (m) => {
@@ -17,7 +17,7 @@ export const crearProductoRepository = (m) => {
     buscarConCategoria: (id) => m.Producto.findByPk(id, { include: conCategoria }),
 
     /** Para modificarlo: solo si está en el alcance. */
-    buscar: (id, alcance) => m.Producto.findOne({ where: { id, ...filtroSucursal(alcance) } }),
+    buscar: (id, alcance) => m.Producto.findOne({ where: porId(id, filtroSucursal(alcance)) }),
 
     crear: (datos) => sinDuplicados(() => m.Producto.create(datos)),
 

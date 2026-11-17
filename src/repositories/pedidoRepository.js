@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { filtroSucursal } from './alcance.js';
+import { filtroSucursal, porId } from './alcance.js';
 
 const ATRIBUTOS_CLIENTE = ['id', 'nombres', 'apellidos', 'identificacion', 'correo_electronico', 'telefono'];
 const ATRIBUTOS_EMPLEADO = ['id', 'nombres', 'apellidos', 'cargo'];
@@ -72,17 +72,17 @@ export const crearPedidoRepository = (m) => {
       }),
 
     buscarCompleto: (id, alcance, { conCategoria = false } = {}) =>
-      m.Pedido.findOne({ where: { id, ...filtroSucursal(alcance) }, include: includeCompleto({ conCategoria }) }),
+      m.Pedido.findOne({ where: porId(id, filtroSucursal(alcance)), include: includeCompleto({ conCategoria }) }),
 
     buscar: (id, alcance, { atributos } = {}) =>
-      m.Pedido.findOne({ where: { id, ...filtroSucursal(alcance) }, ...(atributos && { attributes: atributos }) }),
+      m.Pedido.findOne({ where: porId(id, filtroSucursal(alcance)), ...(atributos && { attributes: atributos }) }),
 
     /** Pedido con su pago (o null), sin bloquear. */
     buscarConPago: (id) => m.Pedido.findByPk(id, { include: { model: m.Pago, as: 'pago' } }),
 
     /** SELECT ... FOR UPDATE: nadie más lo cambia hasta terminar `t`. */
     bloquear: (id, t, alcance) =>
-      m.Pedido.findOne({ where: { id, ...filtroSucursal(alcance) }, lock: t.LOCK.UPDATE, transaction: t }),
+      m.Pedido.findOne({ where: porId(id, filtroSucursal(alcance)), lock: t.LOCK.UPDATE, transaction: t }),
 
     crear: (datos, t) => m.Pedido.create(datos, { transaction: t }),
 

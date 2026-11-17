@@ -1,5 +1,6 @@
 import { ErrorNegocio } from '../errors/ErrorNegocio.js';
 import { SIN_FILTRO, alcanceDe, sucursalDeProductos } from './alcance.js';
+import { abiertaEn } from './horario.js';
 import {
   ESTADOS,
   ESTADOS_CON_RESPONSABLE,
@@ -36,7 +37,7 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
   };
 
   /**
-   * La sucursal recibe pedidos: activa y con su restaurante activo (RN-22).
+   * La sucursal recibe pedidos: activa, con su restaurante activo y dentro de su horario (RN-22).
    * El personal solo registra pedidos de su alcance (RN-21).
    */
   const sucursalQueRecibe = async (sucursalId, usuario) => {
@@ -44,6 +45,9 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
     if (!sucursal) throw new ErrorNegocio('Los productos del pedido no son de tu sucursal');
     if (!sucursal.activa || sucursal.restaurante?.estado !== 'activo') {
       throw new ErrorNegocio('Esta sucursal no está recibiendo pedidos por ahora');
+    }
+    if (!abiertaEn(sucursal.horario, reloj())) {
+      throw new ErrorNegocio('La sucursal está fuera de su horario de atención');
     }
   };
 

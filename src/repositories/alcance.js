@@ -48,3 +48,10 @@ export const filtroEmpleados = (alcance) => {
   if (nivel === 'restaurante') return { restaurante_id: entero(restauranteId) };
   return { id: null };
 };
+
+/**
+ * `where` de una fila por id dentro del alcance. El filtro va en un AND
+ * aparte: con `{ id, ...filtro }` un filtro que también usa `id` (sucursal
+ * propia, restaurante propio) reemplazaría el id pedido.
+ */
+export const porId = (id, filtro) => ({ id, [Op.and]: [filtro] });

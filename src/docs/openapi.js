@@ -120,6 +120,54 @@ export const openapi = {
         minLength: 8,
         description: 'Al menos 8 caracteres, una mayúscula, un número y un carácter especial (RNF-05).'
       },
+      Horario: {
+        type: ['object', 'null'],
+        description: 'Tramos por día (domingo, lunes, martes, miercoles, jueves, viernes, sabado), hora local del restaurante. Día sin entrada: cerrado. null: sin horario (no se restringe por hora).',
+        additionalProperties: lista({ type: 'array', items: { type: 'string', pattern: '^\\d{2}:\\d{2}$' }, minItems: 2, maxItems: 2 }),
+        example: { lunes: [['07:00', '16:00']], sabado: [['08:00', '12:00']] }
+      },
+      Restaurante: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          nombre: { type: 'string', maxLength: 150 },
+          ruc: { type: ['string', 'null'], pattern: '^\\d{13}$' },
+          telefono: { type: ['string', 'null'] },
+          correo_electronico: { type: ['string', 'null'] },
+          estado: { enum: ['activo', 'suspendido'] },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' }
+        }
+      },
+      Sucursal: {
+        type: 'object',
+        description: 'Vista de gestión (incluye inactivas y la tienda de Payphone).',
+        properties: {
+          id: { type: 'integer' },
+          restaurante_id: { type: 'integer' },
+          nombre: { type: 'string', maxLength: 150, description: 'Único en el restaurante.' },
+          direccion: { type: 'string', maxLength: 255 },
+          telefono: { type: ['string', 'null'] },
+          horario: ref('Horario'),
+          activa: { type: 'boolean' },
+          payphone_store_id: { type: ['string', 'null'] },
+          restaurante: { type: 'object', properties: { id: { type: 'integer' }, nombre: { type: 'string' }, estado: { type: 'string' } } }
+        }
+      },
+      SucursalPublica: {
+        type: 'object',
+        description: 'Lo que ve el cliente en la app (RF-37).',
+        properties: {
+          id: { type: 'integer' },
+          restaurante_id: { type: 'integer' },
+          nombre: { type: 'string' },
+          direccion: { type: 'string' },
+          telefono: { type: ['string', 'null'] },
+          horario: ref('Horario'),
+          abierta: { type: 'boolean', description: 'Si atiende ahora según su horario (RN-22).' },
+          restaurante: { type: 'object', properties: { id: { type: 'integer' }, nombre: { type: 'string' } } }
+        }
+      },
       Categoria: {
         type: 'object',
         properties: {
@@ -458,6 +506,121 @@ export const openapi = {
       }
     },
 
+    // ------------------------------------------------ Restaurantes y sucursales
+    '/restaurantes': {
+      get: {
+        tags: ['Restaurantes'],
+        summary: 'Restaurantes (RF-35)',
+        description: 'superadmin: todos; el resto del personal admin, solo el suyo.',
+        ...protegido(['admin']),
+        responses: { ...ok('Lista', lista(ref('Restaurante'))), ...E401, ...E403 }
+      },
+      post: {
+        tags: ['Restaurantes'],
+        summary: 'Crear restaurante (solo superadmin, RN-24)',
+        description: 'Su administrador se crea después con POST /empleados (cargo admin_restaurante y restaurante_id).',
+        'x-reglas': ['RN-24'],
+        ...protegido(['admin']),
+        ...cuerpo({
+          type: 'object',
+          required: ['nombre'],
+          properties: { nombre: { type: 'string' }, ruc: { type: 'string', pattern: '^\\d{13}$' }, telefono: { type: 'string' }, correo_electronico: { type: 'string' } }
+        }),
+        responses: { ...ok('Creado', ref('Restaurante'), '201'), ...E400, ...E401, ...E403 }
+      }
+    },
+    '/restaurantes/{id}': {
+      parameters: [idParam()],
+      get: {
+        tags: ['Restaurantes'],
+        summary: 'Un restaurante de su alcance',
+        ...protegido(['admin']),
+        responses: { ...ok('Restaurante', ref('Restaurante')), ...E401, ...E403, ...E404 }
+      },
+      put: {
+        tags: ['Restaurantes'],
+        summary: 'Editar restaurante; suspender o reactivar (estado, solo superadmin)',
+        description: 'Datos: superadmin o admin_restaurante del propio. Un restaurante suspendido no recibe pedidos (RN-22).',
+        'x-reglas': ['RN-22', 'RN-24'],
+        ...protegido(['admin']),
+        ...cuerpo({
+          type: 'object',
+          properties: {
+            nombre: { type: 'string' },
+            ruc: { type: ['string', 'null'] },
+            telefono: { type: ['string', 'null'] },
+            correo_electronico: { type: ['string', 'null'] },
+            estado: { enum: ['activo', 'suspendido'] }
+          }
+        }),
+        responses: { ...ok('Actualizado', ref('Restaurante')), ...E400, ...E401, ...E403, ...E404 }
+      }
+    },
+    '/sucursales': {
+      get: {
+        tags: ['Restaurantes'],
+        summary: 'Sucursales activas de restaurantes activos, para elegir en la app (RF-37)',
+        description: 'Ordenadas por restaurante y nombre; incluyen si están abiertas ahora.',
+        responses: ok('Lista', lista(ref('SucursalPublica')))
+      },
+      post: {
+        tags: ['Restaurantes'],
+        summary: 'Crear sucursal (RF-36)',
+        description: 'admin_restaurante: en su restaurante; superadmin: indica restaurante_id. El resto, 403 (RN-24).',
+        'x-reglas': ['RN-24'],
+        ...protegido(['admin']),
+        ...cuerpo({
+          type: 'object',
+          required: ['nombre', 'direccion'],
+          properties: {
+            restaurante_id: { type: 'integer', description: 'Solo superadmin.' },
+            nombre: { type: 'string' },
+            direccion: { type: 'string' },
+            telefono: { type: 'string' },
+            horario: ref('Horario'),
+            activa: { type: 'boolean' },
+            payphone_store_id: { type: 'string' }
+          }
+        }),
+        responses: { ...ok('Creada', ref('Sucursal'), '201'), ...E400, ...E401, ...E403 }
+      }
+    },
+    '/sucursales/gestion': {
+      get: {
+        tags: ['Restaurantes'],
+        summary: 'Sucursales de su alcance, activas o no (gestión)',
+        ...protegido(['admin']),
+        responses: { ...ok('Lista', lista(ref('Sucursal'))), ...E401, ...E403 }
+      }
+    },
+    '/sucursales/{id}': {
+      parameters: [idParam()],
+      get: {
+        tags: ['Restaurantes'],
+        summary: 'Una sucursal activa (pública)',
+        responses: { ...ok('Sucursal', ref('SucursalPublica')), ...E404 }
+      },
+      put: {
+        tags: ['Restaurantes'],
+        summary: 'Editar sucursal (RF-36)',
+        description: 'admin_restaurante y superadmin: todo. Admin de la sucursal: solo telefono y horario (403 si no). Fuera del alcance: 404.',
+        'x-reglas': ['RN-21', 'RN-22', 'RN-24'],
+        ...protegido(['admin']),
+        ...cuerpo({
+          type: 'object',
+          properties: {
+            nombre: { type: 'string' },
+            direccion: { type: 'string' },
+            telefono: { type: ['string', 'null'] },
+            horario: ref('Horario'),
+            activa: { type: 'boolean' },
+            payphone_store_id: { type: ['string', 'null'] }
+          }
+        }),
+        responses: { ...ok('Actualizada', ref('Sucursal')), ...E400, ...E401, ...E403, ...E404 }
+      }
+    },
+
     // ------------------------------------------------------------ Catálogo
     '/categorias': {
       get: {
@@ -686,7 +849,7 @@ export const openapi = {
           'Estado inicial "solicitado"; fecha y hora del servidor. Si lo crea un cliente: cliente_id = el del token, sin empleados, y se vacía su carrito.',
           'Si lo crea el personal: cliente_id obligatorio y empleado_id / empleado_preparacion_id opcionales.',
           'El pedido es de la sucursal de sus productos; todos deben ser de la misma sucursal (400 si no).',
-          'La sucursal debe estar activa y su restaurante activo (400 "Esta sucursal no está recibiendo pedidos por ahora"); el personal solo registra pedidos de su alcance.'
+          'La sucursal debe estar activa y su restaurante activo (400 "Esta sucursal no está recibiendo pedidos por ahora") y dentro de su horario (400 "La sucursal está fuera de su horario de atención"); el personal solo registra pedidos de su alcance.'
         ].join(' '),
         'x-reglas': ['RN-06', 'RN-07', 'RN-08', 'RN-19', 'RN-20', 'RN-21', 'RN-22'],
         ...protegido(['cliente', 'admin', 'empleado', 'cajero', 'mesero']),

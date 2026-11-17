@@ -292,7 +292,10 @@ Cada empleado tiene `restaurante_id` y `sucursal_id`; el **nivel** sale del carg
 - `repositories/alcance.js` convierte el alcance en el `where` de Sequelize (`filtroSucursal`, `filtroDeSucursales`, `filtroEmpleados`). Es el **único** lugar que filtra; una consulta sin alcance lanza error. Lo público (menú) y lo del propio cliente pasan `SIN_FILTRO` a propósito.
 - Fuera del alcance todo responde **404**, como si no existiera (CA-32, CA-33). Un empleado sin sucursal no ve nada.
 - Nadie asigna un cargo con más alcance que el suyo (RN-24). Una sucursal inactiva o un restaurante suspendido no reciben pedidos (RN-22).
-- Tests: `tests/aislamiento.test.js` (restaurante X con sucursales A y B, restaurante Y con C) y `tests/sucursales.test.js`.
+- Un `where` por id dentro del alcance se arma con `porId(id, filtro)` (AND aparte), nunca `{ id, ...filtro }`: el filtro de la propia sucursal también usa `id` y reemplazaría el id pedido.
+- Gestión (RF-35, RF-36): `/restaurantes` (crear y suspender: solo superadmin; editar datos: también su admin_restaurante) y `/sucursales` (crear: admin_restaurante en el suyo o superadmin con `restaurante_id`; el admin de una sucursal solo cambia teléfono y horario). `GET /sucursales` es público: las activas de restaurantes activos con `abierta` (RF-37); `GET /sucursales/gestion`, las del alcance.
+- Horario (`services/horario.js`): `{"lunes": [["07:00","16:00"]]}` en hora local; día sin entrada = cerrado; `null` = sin restricción por hora. Fuera de horario no se reciben pedidos (RN-22).
+- Tests: `tests/aislamiento.test.js` (restaurante X con sucursales A y B, restaurante Y con C), `tests/sucursales.test.js`, `tests/restaurantes.test.js` y `tests/unit/horario.test.js`.
 
 ### Reglas para el código nuevo
 
