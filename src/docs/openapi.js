@@ -341,6 +341,8 @@ export const openapi = {
           modalidad: ref('Modalidad'),
           estado: ref('EstadoPedido'),
           valor_total: { type: 'number' },
+          sucursal_id: { type: 'integer' },
+          sucursal: { type: 'object', description: 'id, nombre y restaurante {id, nombre}' },
           detalles: lista(ref('DetallePedido')),
           pago: {
             oneOf: [{ type: 'null' }, ref('Pago')],
@@ -997,7 +999,7 @@ export const openapi = {
         ...protegido(['cliente']),
         responses: {
           ...ok('Lista', lista({
-            allOf: [ref('Pago'), { type: 'object', properties: { pedido: { type: 'object', description: 'id, fecha, hora, estado, valor_total' } } }]
+            allOf: [ref('Pago'), { type: 'object', properties: { pedido: { type: 'object', description: 'id, fecha, hora, estado, valor_total, sucursal_id y sucursal {id, nombre, restaurante {id, nombre}}' } } }]
           })),
           ...E401,
           ...E403
@@ -1155,7 +1157,7 @@ export const openapi = {
         tags: ['App del cliente'],
         summary: 'Reemplazar el carrito completo',
         description:
-          'Cantidad entera 1–50, sin productos repetidos, máximo 100 productos. Los productos inexistentes se ignoran. El stock se valida al crear el pedido. Responde el carrito guardado.',
+          'Cantidad entera 1–50, sin productos repetidos, máximo 100 productos, todos de la misma sucursal (400 si no, RF-39). Los productos inexistentes se ignoran. El stock se valida al crear el pedido. Responde el carrito guardado (cada producto con su sucursal_id).',
         ...protegido(['cliente']),
         ...cuerpo({
           type: 'object',

@@ -26,9 +26,15 @@ export const crearPagoRepository = (m) => ({
       include: {
         model: m.Pedido,
         as: 'pedido',
-        attributes: ['id', 'fecha', 'hora', 'estado', 'valor_total'],
+        attributes: ['id', 'fecha', 'hora', 'estado', 'valor_total', 'sucursal_id'],
         where: { cliente_id: clienteId },
-        required: true
+        required: true,
+        include: {
+          model: m.Sucursal,
+          as: 'sucursal',
+          attributes: ['id', 'nombre'],
+          include: { model: m.Restaurante, as: 'restaurante', attributes: ['id', 'nombre'] }
+        }
       },
       order: [['fecha', 'DESC'], ['id', 'DESC']]
     }),

@@ -133,3 +133,31 @@ describe('Aislamiento por restaurante y sucursal', () => {
     expect((await api().get('/api/v1/productos?sucursal_id=abc')).status).toBe(400);
   });
 });
+
+describe('App del cliente con varias sucursales (RF-37 a RF-39)', () => {
+  it('el carrito no mezcla sucursales y Mis pedidos y Mis pagos traen sucursal y restaurante', async () => {
+    await limpiarBase();
+    const A = await crearSucursal();
+    const C = await crearSucursal({ nueva: true });
+    const cliente = await crearCliente();
+    const token = await login(cliente);
+    const deA = await crearProducto({ sucursal_id: A.id });
+    const deC = await crearProducto({ sucursal_id: C.id });
+
+    const mezcla = await api()
+      .put('/api/v1/carrito')
+      .set(auth(token))
+      .send({ items: [{ producto_id: deA.id, cantidad: 1 }, { producto_id: deC.id, cantidad: 1 }] });
+    expect(mezcla.status).toBe(400);
+    expect(mezcla.body.message).toBe('El carrito solo puede tener productos de una sucursal');
+    const ok = await api().put('/api/v1/carrito').set(auth(token)).send({ items: [{ producto_id: deC.id, cantidad: 2 }] });
+    expect(ok.body.data.items[0].producto.sucursal_id).toBe(C.id);
+
+    const pedido = await crearPedido(cliente, { sucursal: C });
+    await Pago.create({ pedido_id: pedido.id, fecha: new Date(), valor: 5, metodo_pago: 'efectivo' });
+    const mios = await api().get('/api/v1/pedidos/mios').set(auth(token));
+    expect(mios.body.data[0].sucursal).toMatchObject({ id: C.id, nombre: C.nombre, restaurante: { id: C.restaurante_id } });
+    const pagos = await api().get('/api/v1/pagos/mios').set(auth(token));
+    expect(pagos.body.data[0].pedido.sucursal).toMatchObject({ id: C.id, restaurante: { id: C.restaurante_id } });
+  });
+});

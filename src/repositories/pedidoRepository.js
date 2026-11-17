@@ -22,6 +22,14 @@ const filtroPeriodo = ({ alcance, ...rango }) => ({ ...filtroFechas(rango), ...f
  * aquí irá el filtro por restaurante y sucursal (DERCAS 12).
  */
 export const crearPedidoRepository = (m) => {
+  /** Nombre de la sucursal y de su restaurante (Mis pedidos, Mis pagos). */
+  const sucursalConRestaurante = () => ({
+    model: m.Sucursal,
+    as: 'sucursal',
+    attributes: ['id', 'nombre'],
+    include: { model: m.Restaurante, as: 'restaurante', attributes: ['id', 'nombre'] }
+  });
+
   const includeCompleto = ({ conCategoria = false } = {}) => [
     { model: m.Cliente, as: 'cliente', attributes: ATRIBUTOS_CLIENTE },
     { model: m.Empleado, as: 'empleadoResponsable', attributes: ATRIBUTOS_EMPLEADO },
@@ -66,7 +74,8 @@ export const crearPedidoRepository = (m) => {
             as: 'detalles',
             include: { model: m.Producto, as: 'producto', attributes: ATRIBUTOS_PRODUCTO }
           },
-          { model: m.Pago, as: 'pago', attributes: ATRIBUTOS_PAGO }
+          { model: m.Pago, as: 'pago', attributes: ATRIBUTOS_PAGO },
+          sucursalConRestaurante()
         ],
         order: [['id', 'DESC']]
       }),

@@ -39,11 +39,14 @@ export const crearCarritoService = ({ carritos, transacciones }) => {
     /**
      * Reemplaza el carrito completo (la última versión gana). Los productos
      * que ya no existen se ignoran; stock y disponibilidad se validan al
-     * crear el pedido.
+     * crear el pedido. Todos deben ser de la misma sucursal (RF-39).
      */
     reemplazar: async (clienteId, items) => {
       validarItems(items);
       const existentes = await carritos.productosExistentes(items.map((i) => i.producto_id));
+      if (new Set(existentes.values()).size > 1) {
+        throw new ErrorNegocio('El carrito solo puede tener productos de una sucursal');
+      }
       await transacciones.ejecutar(async (t) => {
         await carritos.vaciar(clienteId, t);
         await carritos.insertar(

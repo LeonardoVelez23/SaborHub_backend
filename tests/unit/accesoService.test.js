@@ -130,7 +130,7 @@ describe('Carrito (RF-13)', () => {
     const insertados = [];
     const carrito = crearCarritoService({
       carritos: {
-        productosExistentes: async () => new Set([1, 3]),
+        productosExistentes: async () => new Map([[1, 1], [3, 1]]),
         vaciar: async () => {},
         insertar: async (filas) => insertados.push(...filas),
         items: async () => []
