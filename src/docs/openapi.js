@@ -91,6 +91,7 @@ export const openapi = {
       'JWT del cliente: 20 minutos fijos desde el login; del personal: 8 horas. Sin renovación.',
       '',
       '**Alcance del personal (RN-21)**: cada empleado ve y modifica solo lo de su sucursal; el cargo `admin_restaurante`, todas las sucursales de su restaurante; `superadmin`, toda la plataforma (ambos tienen el rol admin).',
+      '**Clientes por restaurante (RN-26 a RN-28)**: la cuenta del cliente es de la plataforma; cada restaurante ve solo a sus clientes afiliados (`/afiliaciones`), y solo el propio cliente o el superadmin modifican la cuenta.',
       'El alcance sale de la base, nunca de la petición. Un pedido, pago, producto, categoría o empleado fuera del alcance responde 404, como si no existiera.',
       '',
       '**Importes**: números con 2 decimales (`precio`, `valor_total`, `subtotal`, `valor`). Moneda USD.',
@@ -107,7 +108,36 @@ export const openapi = {
       Error: {
         type: 'object',
         required: ['success', 'message'],
-        properties: { success: { const: false }, message: { type: 'string' } }
+        properties: {
+          success: { const: false },
+          message: { type: 'string' },
+          codigo: {
+            type: 'string',
+            description: 'Solo en algunos errores, para reaccionar sin depender del texto. `afiliacion_requerida` (409): el cliente debe aceptar compartir sus datos con el restaurante (POST /afiliaciones).'
+          },
+          data: {
+            type: 'object',
+            description: 'Datos del error con `codigo`; en `afiliacion_requerida`: {restaurante_id, restaurante}.'
+          }
+        }
+      },
+      Afiliacion: {
+        type: 'object',
+        description: 'Afiliación del cliente a un restaurante (RF-43): su consentimiento para que ese restaurante trate sus datos.',
+        properties: {
+          restaurante_id: { type: 'integer' },
+          estado: { enum: ['activo', 'bloqueado', 'retirado'] },
+          origen: { enum: ['app', 'presencial'] },
+          legal_version: { type: 'string' },
+          afiliado_en: { type: 'string', format: 'date-time' },
+          bloqueado_en: { type: ['string', 'null'], format: 'date-time' },
+          motivo_bloqueo: { type: ['string', 'null'] },
+          restaurante: {
+            type: 'object',
+            description: 'Solo en GET /afiliaciones',
+            properties: { id: { type: 'integer' }, nombre: { type: 'string' }, estado: { enum: ['activo', 'suspendido'] } }
+          }
+        }
       },
       Rol: { enum: ['cliente', 'admin', 'empleado', 'cajero', 'cocinero', 'mesero'] },
       TipoCliente: { enum: ['Estudiante', 'Docente', 'Personal Administrativo', 'Persona externa'] },
@@ -703,19 +733,73 @@ export const openapi = {
       }
     },
 
+    // ------------------------------------------------------ Afiliaciones
+    '/afiliaciones': {
+      get: {
+        tags: ['Afiliaciones'],
+        summary: 'Mis restaurantes (RF-45)',
+        description: 'Restaurantes con los que el cliente compartió sus datos, con el estado de cada afiliación.',
+        ...protegido(['cliente']),
+        responses: { ...ok('Lista', lista(ref('Afiliacion'))), ...E401, ...E403 }
+      },
+      post: {
+        tags: ['Afiliaciones'],
+        summary: 'Aceptar compartir mis datos con un restaurante (RF-43)',
+        description:
+          'Exige `acepta_compartir: true` y `version_legal` igual a la vigente de GET /legal. Idempotente si ya está activa; reactiva una retirada. Bloqueada en ese restaurante: 403.',
+        'x-reglas': ['RN-27'],
+        ...protegido(['cliente']),
+        ...cuerpo({
+          type: 'object',
+          required: ['restaurante_id', 'acepta_compartir', 'version_legal'],
+          properties: {
+            restaurante_id: { type: 'integer' },
+            acepta_compartir: { const: true },
+            version_legal: { type: 'string' }
+          }
+        }),
+        responses: { ...ok('Afiliado', ref('Afiliacion'), '201'), ...E400, ...E401, ...E403, ...E404 }
+      }
+    },
+    '/afiliaciones/{restauranteId}': {
+      parameters: [idParam('restauranteId')],
+      delete: {
+        tags: ['Afiliaciones'],
+        summary: 'Retirar mi consentimiento a un restaurante (RF-45)',
+        description:
+          'No podrá pedir ahí hasta volver a aceptar; los pedidos anteriores se conservan. Sin afiliación: 404. Si el restaurante lo bloqueó: 409 (retirar no levanta el bloqueo).',
+        ...protegido(['cliente']),
+        responses: {
+          ...ok('Retirado', undefined),
+          ...E400,
+          ...E401,
+          ...E403,
+          ...E404,
+          ...error('409', 'Bloqueado en ese restaurante')
+        }
+      }
+    },
+
     // ------------------------------------------------------------ Usuarios
     '/clientes': {
       get: {
         tags: ['Usuarios'],
-        summary: 'Clientes activos (sin eliminados), por apellido y nombre',
+        summary: 'Clientes del restaurante (RF-44): afiliados activos o bloqueados, por apellido y nombre',
+        description:
+          'El personal ve solo los clientes afiliados a su restaurante, cada uno con su `afiliacion`; el superadmin, todos los activos (con `afiliacion: null`). Personal sin restaurante: 403.',
+        'x-reglas': ['RN-26'],
         ...protegido(['admin', 'empleado', 'cajero', 'mesero']),
-        responses: { ...ok('Lista', lista(ref('Cliente'))), ...E401, ...E403 }
+        responses: {
+          ...ok('Lista', lista({ allOf: [ref('Cliente'), { type: 'object', properties: { afiliacion: { oneOf: [ref('Afiliacion'), { type: 'null' }] } } }] })),
+          ...E401,
+          ...E403
+        }
       },
       post: {
         tags: ['Usuarios'],
         summary: 'Registro de cliente (RF-01); también lo usa el personal',
         description:
-          'Público. Sin token (o con token de cliente) exige `acepta_terminos: true` y `version_legal` igual a la vigente de GET /legal; guarda legal_version y legal_aceptado_en. Con token de personal no se exige (el personal no acepta por el cliente).',
+          'Público. Sin token (o con token de cliente) exige `acepta_terminos: true` y `version_legal` igual a la vigente de GET /legal; guarda legal_version y legal_aceptado_en. Con token de personal no se exige (el personal no acepta por el cliente); con `consentimiento_presencial: true`, el cliente queda afiliado (origen presencial) al restaurante de quien lo registra (RF-43).',
         'x-reglas': ['RN-18', 'RNF-05'],
         ...cuerpo({
           type: 'object',
@@ -729,7 +813,8 @@ export const openapi = {
             tipo_cliente: ref('TipoCliente'),
             contrasenia: ref('Contrasenia'),
             acepta_terminos: { const: true },
-            version_legal: { type: 'string' }
+            version_legal: { type: 'string' },
+            consentimiento_presencial: { type: 'boolean', description: 'Solo personal: el cliente aceptó en persona compartir sus datos con el restaurante.' }
           }
         }),
         responses: {
@@ -738,19 +823,69 @@ export const openapi = {
         }
       }
     },
+    '/clientes/buscar': {
+      get: {
+        tags: ['Usuarios'],
+        summary: 'Buscar un cliente por identificación o correo exactos (RF-44, pedido asistido)',
+        description:
+          'Devuelve solo id, nombres, apellidos y el estado de su afiliación al restaurante de quien busca (null si no está afiliado). Sin coincidencia exacta: 404. No lista clientes de otros restaurantes.',
+        'x-reglas': ['RN-26'],
+        ...protegido(['admin', 'empleado', 'cajero', 'mesero']),
+        parameters: [{ name: 'q', in: 'query', required: true, description: 'Identificación o correo exactos', schema: { type: 'string' } }],
+        responses: {
+          ...ok('Cliente', {
+            type: 'object',
+            properties: {
+              id: { type: 'integer' },
+              nombres: { type: 'string' },
+              apellidos: { type: 'string' },
+              afiliacion: { enum: ['activo', 'bloqueado', 'retirado', null] }
+            }
+          }),
+          ...E400,
+          ...E401,
+          ...E403,
+          ...E404
+        }
+      }
+    },
+    '/clientes/{id}/bloqueo': {
+      parameters: [idParam()],
+      put: {
+        tags: ['Usuarios'],
+        summary: 'Bloquear o desbloquear a un cliente en mi restaurante (RF-44)',
+        description:
+          'Solo afecta al restaurante del admin; la cuenta y sus otros restaurantes no cambian. Un cliente bloqueado no puede pedir aquí (403). El superadmin indica `restaurante_id`. Sin afiliación en el restaurante: 404.',
+        'x-reglas': ['RN-27', 'RN-28'],
+        ...protegido(['admin']),
+        ...cuerpo({
+          type: 'object',
+          required: ['bloqueado'],
+          properties: {
+            bloqueado: { type: 'boolean' },
+            motivo: { type: 'string', maxLength: 255, description: 'Obligatorio al bloquear' },
+            restaurante_id: { type: 'integer', description: 'Solo superadmin (obligatorio)' }
+          }
+        }),
+        responses: { ...ok('Actualizado', ref('Afiliacion')), ...E400, ...E401, ...E403, ...E404 }
+      }
+    },
     '/clientes/{id}': {
       parameters: [idParam()],
       get: {
         tags: ['Usuarios'],
-        summary: 'Un cliente (el cliente solo el suyo)',
+        summary: 'Un cliente (el cliente solo el suyo; el personal, solo afiliados a su restaurante)',
+        description: 'Fuera de los afiliados del restaurante del personal: 404 (RN-26). El superadmin ve cualquiera.',
+        'x-reglas': ['RN-26'],
         ...protegido(['admin', 'cliente']),
         responses: { ...ok('Cliente', ref('Cliente')), ...E401, ...E403, ...E404 }
       },
       put: {
         tags: ['Usuarios'],
-        summary: 'Editar cliente (RF-06, RN-16)',
+        summary: 'Editar cliente (RF-06, RN-16, RN-28)',
         description:
-          'Campos omitidos no cambian; telefono "" lo borra. Cambiar `contrasenia` exige `otp` (de /auth/forgot-password), salvo que lo haga el admin.',
+          'Solo el propio cliente o el superadmin (el resto del personal: 403). Campos omitidos no cambian; telefono "" lo borra. Cambiar `contrasenia` exige `otp` (de /auth/forgot-password), salvo que lo haga el superadmin.',
+        'x-reglas': ['RN-16', 'RN-28'],
         ...protegido(['admin', 'cliente']),
         ...cuerpo({
           type: 'object',
@@ -770,6 +905,8 @@ export const openapi = {
       delete: {
         tags: ['Usuarios'],
         summary: 'Eliminar cliente (falla si tiene pedidos)',
+        description: 'Solo el superadmin (RN-28); el resto del personal: 403. El cliente elimina su propia cuenta con DELETE /privacidad/mi-cuenta.',
+        'x-reglas': ['RN-28'],
         ...protegido(['admin']),
         responses: { ...ok('Eliminado', undefined), ...E400, ...E401, ...E403, ...E404 }
       }
@@ -851,9 +988,11 @@ export const openapi = {
           'Estado inicial "solicitado"; fecha y hora del servidor. Si lo crea un cliente: cliente_id = el del token, sin empleados, y se vacía su carrito.',
           'Si lo crea el personal: cliente_id obligatorio y empleado_id / empleado_preparacion_id opcionales.',
           'El pedido es de la sucursal de sus productos; todos deben ser de la misma sucursal (400 si no).',
-          'La sucursal debe estar activa y su restaurante activo (400 "Esta sucursal no está recibiendo pedidos por ahora") y dentro de su horario (400 "La sucursal está fuera de su horario de atención"); el personal solo registra pedidos de su alcance.'
+          'La sucursal debe estar activa y su restaurante activo (400 "Esta sucursal no está recibiendo pedidos por ahora") y dentro de su horario (400 "La sucursal está fuera de su horario de atención"); el personal solo registra pedidos de su alcance.',
+          'El cliente debe estar afiliado (activo) al restaurante de la sucursal (RN-27): sin afiliación, 409 con `codigo: "afiliacion_requerida"` y `data: {restaurante_id, restaurante}` (la app pide aceptar con POST /afiliaciones y reintenta);',
+          'si lo registra el personal, `consentimiento_presencial: true` crea la afiliación presencial. Cliente bloqueado en ese restaurante: 403.'
         ].join(' '),
-        'x-reglas': ['RN-06', 'RN-07', 'RN-08', 'RN-19', 'RN-20', 'RN-21', 'RN-22'],
+        'x-reglas': ['RN-06', 'RN-07', 'RN-08', 'RN-19', 'RN-20', 'RN-21', 'RN-22', 'RN-27'],
         ...protegido(['cliente', 'admin', 'empleado', 'cajero', 'mesero']),
         ...cuerpo({
           type: 'object',
@@ -867,11 +1006,13 @@ export const openapi = {
             }),
             cliente_id: { type: 'integer', description: 'Solo personal (obligatorio)' },
             empleado_id: { type: 'integer', description: 'Solo personal' },
-            empleado_preparacion_id: { type: 'integer', description: 'Solo personal' }
+            empleado_preparacion_id: { type: 'integer', description: 'Solo personal' },
+            consentimiento_presencial: { type: 'boolean', description: 'Solo personal: el cliente aceptó en persona compartir sus datos con el restaurante (RF-43).' }
           }
         }),
         responses: {
           ...ok('Creado', ref('Pedido'), '201'),
+          ...error('409', 'Cliente sin afiliación al restaurante (`codigo: "afiliacion_requerida"`)'),
           ...error('400', 'Ej.: "Stock insuficiente para \\"X\\". Disponible: 3", "Cantidad máxima por producto: 50 (producto id N)", "El producto \\"X\\" no está disponible"'),
           ...E401,
           ...E403
@@ -1187,6 +1328,7 @@ export const openapi = {
               foto_perfil: { type: ['object', 'null'], description: 'tipo, actualizada_en, imagen_base64' },
               ingreso_biometrico: lista({ type: 'object', description: 'dispositivo, activado_en, ultimo_uso (sin la credencial)' }),
               carrito: lista({ type: 'object', description: 'producto (nombre), cantidad, agregado_en' }),
+              restaurantes: lista({ type: 'object', description: 'restaurante, estado, origen, version_legal, afiliado_en (con quién compartió sus datos)' }),
               aceptacion_legal: { type: ['object', 'null'], description: 'version, aceptado_en' },
               pedidos: lista({ type: 'object', description: 'id, fecha, hora, modalidad, estado, valor_total, productos[], pago' })
             }

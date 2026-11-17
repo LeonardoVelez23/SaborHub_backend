@@ -47,10 +47,14 @@ describe('Cambios integrados desde main', () => {
   });
 
   describe('cambio de contraseña por el administrador', () => {
-    it('el admin cambia la de un cliente sin OTP', async () => {
+    it('el superadmin cambia la de un cliente sin OTP; un admin de restaurante no la toca (RN-28)', async () => {
+      const prohibido = await api().put(`/api/v1/clientes/${ana.id}`).set(auth(tokenAdmin)).send({ contrasenia: 'Nueva#2026' });
+      expect(prohibido.status).toBe(403);
+
+      const superadmin = await crearEmpleado('superadmin', { restaurante_id: null, sucursal_id: null });
       const res = await api()
         .put(`/api/v1/clientes/${ana.id}`)
-        .set(auth(tokenAdmin))
+        .set(auth(await login(superadmin)))
         .send({ contrasenia: 'Nueva#2026' });
 
       expect(res.status).toBe(200);
@@ -80,10 +84,11 @@ describe('Cambios integrados desde main', () => {
       expect(res.body.message).toContain('OTP');
     });
 
-    it('la política de contraseñas también aplica al admin', async () => {
+    it('la política de contraseñas también aplica al superadmin', async () => {
+      const superadmin = await crearEmpleado('superadmin', { restaurante_id: null, sucursal_id: null });
       const res = await api()
         .put(`/api/v1/clientes/${ana.id}`)
-        .set(auth(tokenAdmin))
+        .set(auth(await login(superadmin)))
         .send({ contrasenia: 'simple' });
 
       expect(res.status).toBe(400);

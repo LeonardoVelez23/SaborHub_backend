@@ -156,7 +156,7 @@ GET /api/v1/legal/privacidad   # política de protección de datos
 
 Públicos, en JSON (`{tipo, titulo, version, secciones: [{titulo, parrafos}]}`); la app los muestra con sus estilos. Los textos están en `src/legal/documentos.js`: al cambiarlos, sube `VERSION_LEGAL`.
 
-El registro (`POST /clientes` sin token de personal) exige `acepta_terminos: true` y `version_legal` igual a la vigente, y guarda `legal_version` y `legal_aceptado_en` en el cliente. Los clientes que crea el personal desde el panel no la llevan.
+El registro (`POST /clientes` sin token de personal) exige `acepta_terminos: true` y `version_legal` igual a la vigente, y guarda `legal_version` y `legal_aceptado_en` en el cliente. Los clientes que crea el personal desde el panel no la llevan; con `consentimiento_presencial: true` quedan afiliados a su restaurante.
 
 ### Privacidad del cliente
 
@@ -296,6 +296,17 @@ Cada empleado tiene `restaurante_id` y `sucursal_id`; el **nivel** sale del carg
 - Gestión (RF-35, RF-36): `/restaurantes` (crear y suspender: solo superadmin; editar datos: también su admin_restaurante) y `/sucursales` (crear: admin_restaurante en el suyo o superadmin con `restaurante_id`; el admin de una sucursal solo cambia teléfono y horario). `GET /sucursales` es público: las activas de restaurantes activos con `abierta` (RF-37); `GET /sucursales/gestion`, las del alcance.
 - Horario (`services/horario.js`): `{"lunes": [["07:00","16:00"]]}` en hora local; día sin entrada = cerrado; `null` = sin restricción por hora. Fuera de horario no se reciben pedidos (RN-22).
 - Tests: `tests/aislamiento.test.js` (restaurante X con sucursales A y B, restaurante Y con C), `tests/sucursales.test.js`, `tests/restaurantes.test.js` y `tests/unit/horario.test.js`.
+
+### Clientes por restaurante (afiliación, RN-26 a RN-28)
+
+La cuenta del cliente es de la **plataforma**; cada restaurante tiene una **afiliación** por cliente (`ClientesRestaurantes`: `activo`, `bloqueado` o `retirado`, origen `app` o `presencial`, versión legal aceptada). Reglas en `services/afiliacionService.js`, consultas en `repositories/afiliacionRepository.js`.
+
+- Pedir exige afiliación activa al restaurante de la sucursal (RN-27): sin ella, **409** con `codigo: "afiliacion_requerida"` y `data: {restaurante_id, restaurante}`; la app pide aceptar con `POST /afiliaciones` y reintenta. En un pedido asistido, `consentimiento_presencial: true` la crea. Bloqueado: 403.
+- El personal lista solo a los afiliados de su restaurante (`GET /clientes`) y busca a otros solo por identificación o correo exactos (`GET /clientes/buscar?q=`, devuelve id y nombre). El superadmin ve a todos.
+- `PUT /clientes/:id/bloqueo` `{bloqueado, motivo}` (admin): bloqueo solo en su restaurante. Editar o eliminar la cuenta: el propio cliente o el superadmin (RN-28).
+- El cliente: `GET /afiliaciones` (Mis restaurantes), `POST /afiliaciones` `{restaurante_id, acepta_compartir: true, version_legal}` y `DELETE /afiliaciones/:restauranteId` (retira el consentimiento; no levanta un bloqueo). Eliminar la cuenta borra sus afiliaciones; Mis datos las incluye.
+- `ErrorNegocio(mensaje, status, {codigo, datos})`: `codigo` y `data` llegan en la respuesta para que la app reaccione sin depender del texto.
+- Tests: `tests/afiliaciones.test.js` (CA-39 a CA-42).
 
 ### Reglas para el código nuevo
 

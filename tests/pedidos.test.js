@@ -6,6 +6,7 @@ import {
   crearCliente,
   crearEmpleado,
   crearProducto,
+  afiliar,
   limpiarBase,
   login
 } from './helpers.js';
@@ -29,6 +30,8 @@ describe('Pedidos (bloque 2)', () => {
     await limpiarBase();
     ana = await crearCliente();
     beto = await crearCliente();
+    await afiliar(ana);
+    await afiliar(beto);
     const admin = await crearEmpleado('admin');
     cajero = await crearEmpleado('cajero');
     [tokenAna, tokenBeto, tokenAdmin, tokenCajero] = await Promise.all([

@@ -52,6 +52,8 @@ vi.mock('../../src/models/index.js', () => {
     },
     Sucursal: { findOne: vi.fn(async () => ({ id: 1, restaurante_id: 1, activa: true, restaurante: { estado: 'activo' } })) },
     Restaurante: { findByPk: vi.fn(async () => ({ id: 1 })) },
+    // Cliente afiliado al restaurante de la sucursal (RN-27).
+    ClienteRestaurante: { findOne: vi.fn(async () => ({ estado: 'activo' })) },
     Cliente: {
       findByPk: vi.fn(),
       findOne: vi.fn(),

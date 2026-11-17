@@ -7,8 +7,11 @@ import { VERSION_LEGAL } from '../../src/legal/documentos.js';
 
 // verifyToken consulta el rol vigente en la base; aquí los modelos son
 // simulados, así que se confía en el rol del token.
+// El token de prueba puede traer `nivel` (superadmin: 'plataforma').
 vi.mock('../../src/services/sesionService.js', () => ({
-  crearSesionService: () => ({ vigente: async ({ rol }) => ({ rol, restaurante_id: 1, sucursal_id: 1 }) })
+  crearSesionService: () => ({
+    vigente: async ({ rol, nivel = 'sucursal' }) => ({ rol, nivel, restaurante_id: 1, sucursal_id: 1 })
+  })
 }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'jwt_secret_resto_logrod_2026';
@@ -25,7 +28,9 @@ vi.mock('../../src/models/index.js', () => ({
   Producto: { findAll: vi.fn() },
   Pedido: { findAll: vi.fn() },
   DetallePedido: { findAll: vi.fn() },
-  Pago: { findAll: vi.fn() }
+  Pago: { findAll: vi.fn() },
+  ClienteRestaurante: { findOne: vi.fn() },
+  Restaurante: {}
 }));
 
 describe('Cliente Routes (/api/v1/clientes)', () => {
@@ -156,7 +161,17 @@ describe('Cliente Routes (/api/v1/clientes)', () => {
   });
 
   describe('DELETE /api/v1/clientes/:id', () => {
-    it('debe eliminar un cliente si el usuario es admin', async () => {
+    it('un admin de restaurante no elimina cuentas de clientes (RN-28)', async () => {
+      const res = await request(app)
+        .delete('/api/v1/clientes/1')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(403);
+      expect(Cliente.findByPk).not.toHaveBeenCalled();
+    });
+
+    it('el superadmin elimina un cliente', async () => {
+      const superToken = jwt.sign({ id: 98, rol: 'admin', nivel: 'plataforma' }, JWT_SECRET);
       const mockUser = {
         id: 1,
         destroy: vi.fn().mockResolvedValue(true)
@@ -165,7 +180,7 @@ describe('Cliente Routes (/api/v1/clientes)', () => {
 
       const res = await request(app)
         .delete('/api/v1/clientes/1')
-        .set('Authorization', `Bearer ${adminToken}`);
+        .set('Authorization', `Bearer ${superToken}`);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);

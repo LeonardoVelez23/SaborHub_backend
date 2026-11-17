@@ -58,11 +58,13 @@ describe('Cuentas de clientes y empleados (RF-01, RF-06, RF-07)', () => {
 
   it('eliminar la cuenta pide la contraseña, no se permite con pedidos en curso y anonimiza', async () => {
     const ana = { id: 3, contrasenia: `hash:${CLAVE}`, nombres: 'Ana' };
+    const afiliaciones = { eliminarDelCliente: vi.fn() };
     let abiertos = 1;
     const svc = crearPrivacidadService({
       clientes: repo([ana]),
       fotos: { eliminar: vi.fn() },
       privacidad: { contarPedidosAbiertos: async () => abiertos, vaciarCarrito: vi.fn() },
+      afiliaciones,
       contrasenias,
       transacciones: { ejecutar: (trabajo) => trabajo('t') }
     });
@@ -73,6 +75,8 @@ describe('Cuentas de clientes y empleados (RF-01, RF-06, RF-07)', () => {
     await svc.eliminarCuenta(3, CLAVE);
     expect(ana).toMatchObject({ nombres: 'Cliente', correo_electronico: 'eliminado-3@eliminado.invalid', contrasenia: 'hash:imposible' });
     expect(ana.eliminado_en).toBeInstanceOf(Date);
+    // Ningún restaurante conserva su consentimiento (RF-45).
+    expect(afiliaciones.eliminarDelCliente).toHaveBeenCalledWith(3, 't');
   });
 
   it('reconoce la foto por sus bytes, no por lo que diga la app', () => {

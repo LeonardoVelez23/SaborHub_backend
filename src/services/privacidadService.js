@@ -5,7 +5,7 @@ const ESTADOS_FINALES = ['entregado', 'cancelado'];
 const noEncontrado = () => new ErrorNegocio('Cliente no encontrado', 404);
 
 /** Derechos del cliente sobre sus datos (LOPDP, RNF-21). */
-export const crearPrivacidadService = ({ clientes, fotos, privacidad, contrasenias, transacciones, ahora = () => new Date() }) => ({
+export const crearPrivacidadService = ({ clientes, fotos, privacidad, afiliaciones, contrasenias, transacciones, ahora = () => new Date() }) => ({
   /** Todos sus datos en un formato descargable (acceso y portabilidad). */
   misDatos: async (clienteId) => {
     const cliente = await clientes.buscar(clienteId);
@@ -15,6 +15,7 @@ export const crearPrivacidadService = ({ clientes, fotos, privacidad, contraseni
     const dispositivos = await privacidad.dispositivosBiometricos(cliente.id);
     const carrito = await privacidad.carrito(cliente.id);
     const pedidos = await privacidad.pedidos(cliente.id);
+    const restaurantes = await afiliaciones.delCliente(cliente.id);
 
     return {
       generado_en: ahora().toISOString(),
@@ -42,6 +43,14 @@ export const crearPrivacidadService = ({ clientes, fotos, privacidad, contraseni
         producto: item.producto?.nombre ?? null,
         cantidad: item.cantidad,
         agregado_en: item.createdAt
+      })),
+      // Con qué restaurantes compartió sus datos (RF-43).
+      restaurantes: restaurantes.map((a) => ({
+        restaurante: a.restaurante?.nombre ?? null,
+        estado: a.estado,
+        origen: a.origen,
+        version_legal: a.legal_version,
+        afiliado_en: a.afiliado_en
       })),
       aceptacion_legal: cliente.legal_version
         ? { version: cliente.legal_version, aceptado_en: cliente.legal_aceptado_en }
@@ -88,6 +97,7 @@ export const crearPrivacidadService = ({ clientes, fotos, privacidad, contraseni
 
       await fotos.eliminar(cliente.id, t);
       await privacidad.vaciarCarrito(cliente.id, t);
+      await afiliaciones.eliminarDelCliente(cliente.id, t);
       await clientes.actualizar(
         cliente,
         {

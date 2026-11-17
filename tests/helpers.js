@@ -10,7 +10,8 @@ import {
   Pedido,
   DetallePedido,
   Restaurante,
-  Sucursal
+  Sucursal,
+  ClienteRestaurante
 } from '../src/models/index.js';
 
 export const api = () => request(app);
@@ -109,6 +110,22 @@ export const crearPedido = async (cliente, { estado = 'solicitado', empleado = n
     subtotal: 5
   });
   return pedido;
+};
+
+/**
+ * Afilia al cliente al restaurante de `sucursal` (por defecto, el de la
+ * sucursal de prueba), como si hubiera aceptado en la app (RF-43).
+ */
+export const afiliar = async (cliente, { sucursal = null, estado = 'activo' } = {}) => {
+  const { restaurante_id } = sucursal ?? (await crearSucursal());
+  return ClienteRestaurante.create({
+    cliente_id: cliente.id,
+    restaurante_id,
+    estado,
+    origen: 'app',
+    legal_version: 'prueba',
+    afiliado_en: new Date()
+  });
 };
 
 export const auth = (token) => ({ Authorization: `Bearer ${token}` });

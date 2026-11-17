@@ -24,7 +24,7 @@ export const crearSucursalRepository = (m) => {
     buscarConRestaurante: (id, alcance) =>
       m.Sucursal.findOne({
         where: porId(id, filtroDeSucursales(alcance)),
-        include: { model: m.Restaurante, as: 'restaurante', attributes: ['id', 'estado'] }
+        include: { model: m.Restaurante, as: 'restaurante', attributes: ['id', 'nombre', 'estado'] }
       }),
 
     /** Activas de restaurantes activos, para la app (RF-37). */

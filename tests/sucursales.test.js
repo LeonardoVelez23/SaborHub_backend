@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Categoria, Empleado, Pedido } from '../src/models/index.js';
-import { api, auth, crearCliente, crearEmpleado, crearProducto, crearSucursal, limpiarBase, login } from './helpers.js';
+import { afiliar, api, auth, crearCliente, crearEmpleado, crearProducto, crearSucursal, limpiarBase, login } from './helpers.js';
 
 /** Restaurantes y sucursales (DERCAS 12, etapa 2). */
 describe('Sucursales', () => {
@@ -56,6 +56,7 @@ describe('Sucursales', () => {
 
   it('un pedido es de la sucursal de sus productos y no mezcla sucursales (RN-20, CA-34)', async () => {
     const cliente = await crearCliente();
+    await afiliar(cliente, { sucursal: otra });
     const tokenCliente = await login(cliente);
     const aqui = await crearProducto({ sucursal_id: sucursal.id });
     const alla = await crearProducto({ sucursal_id: otra.id });

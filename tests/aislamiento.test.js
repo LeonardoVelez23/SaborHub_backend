@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Pago, Restaurante, Sucursal } from '../src/models/index.js';
-import { api, auth, crearCliente, crearEmpleado, crearPedido, crearProducto, crearSucursal, limpiarBase, login } from './helpers.js';
+import { afiliar, api, auth, crearCliente, crearEmpleado, crearPedido, crearProducto, crearSucursal, limpiarBase, login } from './helpers.js';
 
 /**
  * Aislamiento entre restaurantes y sucursales (DERCAS 12, RN-21, CA-32 y
@@ -106,6 +106,7 @@ describe('Aislamiento por restaurante y sucursal', () => {
   });
 
   it('una sucursal inactiva o un restaurante suspendido no reciben pedidos (RN-22)', async () => {
+    await afiliar(cliente, { sucursal: B });
     const tokenCliente = await login(cliente);
     const producto = await crearProducto({ sucursal_id: B.id });
     const pedir = () =>

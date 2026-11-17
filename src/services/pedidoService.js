@@ -21,7 +21,7 @@ import {
  *
  * `usuario` es el de la sesión: {id, rol}.
  */
-export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucursales, transacciones, reloj }) => {
+export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucursales, afiliacion, transacciones, reloj }) => {
   const esCliente = (usuario) => usuario.rol === 'cliente';
   /** El cliente ve lo suyo (se filtra por cliente); el personal, su alcance. */
   const alcanceDel = (usuario) => (esCliente(usuario) ? SIN_FILTRO : alcanceDe(usuario));
@@ -49,6 +49,7 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
     if (!abiertaEn(sucursal.horario, reloj())) {
       throw new ErrorNegocio('La sucursal está fuera de su horario de atención');
     }
+    return sucursal;
   };
 
   /**
@@ -101,9 +102,10 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
     /**
      * El cliente del pedido sale de la sesión (o de los datos, si lo
      * registra el personal), y la fecha y hora del reloj del servidor
-     * (RN-19). Si lo hace el cliente, se vacía su carrito.
+     * (RN-19). Exige la afiliación del cliente al restaurante (RN-27). Si
+     * lo hace el cliente, se vacía su carrito.
      */
-    crear: async (usuario, { modalidad, detalles, cliente_id, empleado_id, empleado_preparacion_id }) => {
+    crear: async (usuario, { modalidad, detalles, cliente_id, empleado_id, empleado_preparacion_id, consentimiento_presencial }) => {
       const pedidoId = await transacciones.ejecutar(async (t) => {
         validarModalidad(modalidad);
         const cantidades = agruparDetalles(detalles);
@@ -117,7 +119,15 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
         if (!cliente) throw new ErrorNegocio('El cliente indicado no existe');
 
         const { lineas, total, sucursalId } = await reservarStock(cantidades, t);
-        await sucursalQueRecibe(sucursalId, usuario);
+        const sucursal = await sucursalQueRecibe(sucursalId, usuario);
+        // Afiliación activa del cliente al restaurante (RN-27).
+        await afiliacion.exigirParaPedido({
+          clienteId: cliente.id,
+          restaurante: sucursal.restaurante,
+          deCliente,
+          consentimientoPresencial: consentimiento_presencial,
+          t
+        });
 
         // Un cliente no asigna personal a su pedido.
         const empleadoId = deCliente ? null : await empleadoValido(empleado_id, 'empleado_id', sucursalId, t);

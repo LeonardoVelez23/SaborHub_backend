@@ -24,18 +24,41 @@ const unico = async (operacion) => {
 
 const noEncontrado = () => new ErrorNegocio('Cliente no encontrado', 404);
 
-/**
- * Clientes (RF-01, RF-06, RF-08). `usuario` es el de la sesión ({id, rol})
- * o null en el registro público.
- */
-export const crearClienteService = ({ clientes, otps, contrasenias, versionLegal, ahora = () => new Date() }) => ({
-  listar: () => clientes.listarActivos(),
+const esPersonal = (usuario) => Boolean(usuario) && usuario.rol !== 'cliente';
+const esSuperadmin = (usuario) => usuario?.nivel === 'plataforma';
 
-  /** Un cliente solo ve su propio perfil. */
+/** La cuenta solo la modifica el propio cliente o el superadmin (RN-28). */
+const comprobarCuenta = (usuario, id) => {
+  if (usuario?.rol === 'cliente') return comprobarDuenio(usuario, id);
+  if (!esSuperadmin(usuario)) {
+    throw new ErrorNegocio('Solo el cliente o el superadmin pueden modificar la cuenta de un cliente', 403);
+  }
+};
+
+/** Cliente con su afiliación al restaurante del personal (o null para el superadmin). */
+const conAfiliacion = (cliente) => {
+  const { afiliaciones, ...datos } = cliente.toJSON ? cliente.toJSON() : cliente;
+  return { ...datos, afiliacion: afiliaciones?.[0] ?? null };
+};
+
+/**
+ * Clientes (RF-01, RF-06, RF-08, RF-44). `usuario` es el de la sesión
+ * ({id, rol, nivel, restaurante_id}) o null en el registro público.
+ * `afiliacion` es el servicio de clientes por restaurante (RN-26 a RN-28).
+ */
+export const crearClienteService = ({ clientes, afiliacion, otps, contrasenias, versionLegal, ahora = () => new Date() }) => ({
+  /** Solo los afiliados al restaurante del personal; el superadmin, todos (RN-26). */
+  listar: async (usuario) => (await afiliacion.clientesDelPersonal(usuario)).map(conAfiliacion),
+
+  /** Búsqueda exacta para un pedido asistido (RF-44). */
+  buscar: (usuario, texto) => afiliacion.buscar(usuario, texto),
+
+  /** Un cliente solo ve su propio perfil; el personal, a sus afiliados (fuera de ellos, 404). */
   obtener: async (id, usuario) => {
     if (usuario.rol === 'cliente' && String(usuario.id) !== String(id)) {
       throw new ErrorNegocio('No tiene permisos para ver este perfil', 403);
     }
+    if (esPersonal(usuario) && !(await afiliacion.visibleParaPersonal(usuario, id))) throw noEncontrado();
     const cliente = await clientes.buscarSinContrasenia(id);
     if (!cliente) throw noEncontrado();
     return cliente;
@@ -43,7 +66,8 @@ export const crearClienteService = ({ clientes, otps, contrasenias, versionLegal
 
   /**
    * Quien se registra acepta los términos y la política de datos vigentes
-   * (LOPDP). El personal que crea un cliente desde el panel no acepta por él.
+   * (LOPDP). El personal que crea un cliente desde el panel no acepta por él;
+   * con `consentimiento_presencial: true` lo afilia a su restaurante (RF-43).
    */
   crear: async (usuario, datos) => {
     const { identificacion, nombres, apellidos, correo_electronico, telefono, tipo_cliente, contrasenia } = datos;
@@ -55,9 +79,9 @@ export const crearClienteService = ({ clientes, otps, contrasenias, versionLegal
     validarTipo(tipo_cliente);
     validarPolitica(contrasenia);
 
-    const esPersonal = Boolean(usuario) && usuario.rol !== 'cliente';
+    const delPersonal = esPersonal(usuario);
     let aceptacionLegal = {};
-    if (!esPersonal) {
+    if (!delPersonal) {
       if (datos.acepta_terminos !== true) {
         throw new ErrorNegocio('Debes aceptar los términos y condiciones y la política de protección de datos');
       }
@@ -79,22 +103,25 @@ export const crearClienteService = ({ clientes, otps, contrasenias, versionLegal
         ...aceptacionLegal
       })
     );
+    if (delPersonal && datos.consentimiento_presencial === true) {
+      await afiliacion.afiliarPresencial(cliente.id, usuario);
+    }
     return sinContrasenia(cliente);
   },
 
   /**
-   * Edita los datos (RN-16). Cambiar la contraseña exige el código del
-   * correo, salvo que lo haga el administrador.
+   * Edita los datos (RN-16, RN-28): el propio cliente o el superadmin.
+   * Cambiar la contraseña exige el código del correo, salvo al superadmin.
    */
   actualizar: async (id, usuario, datos) => {
     const { identificacion, nombres, apellidos, correo_electronico, telefono, tipo_cliente } = datos;
-    comprobarDuenio(usuario, id);
+    comprobarCuenta(usuario, id);
     const cliente = await clientes.buscar(id);
     if (!cliente) throw noEncontrado();
     if (tipo_cliente) validarTipo(tipo_cliente);
 
     const cambio = await cambioDeContrasenia(
-      { cuenta: cliente, contrasenia: datos.contrasenia, otp: datos.otp, sinOtp: usuario.rol === 'admin' },
+      { cuenta: cliente, contrasenia: datos.contrasenia, otp: datos.otp, sinOtp: esSuperadmin(usuario) },
       { otps, contrasenias }
     );
 
@@ -112,7 +139,11 @@ export const crearClienteService = ({ clientes, otps, contrasenias, versionLegal
     return sinContrasenia(cliente);
   },
 
-  eliminar: async (id) => {
+  /** Solo el superadmin (RN-28); el cliente elimina la suya en /privacidad. */
+  eliminar: async (id, usuario) => {
+    if (!esSuperadmin(usuario)) {
+      throw new ErrorNegocio('Solo el superadmin puede eliminar la cuenta de un cliente', 403);
+    }
     const cliente = await clientes.buscar(id);
     if (!cliente) throw noEncontrado();
     await clientes.eliminar(cliente);

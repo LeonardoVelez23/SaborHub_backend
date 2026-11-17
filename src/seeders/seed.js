@@ -1,4 +1,4 @@
-import { sequelize, Categoria, Producto, Cliente, Empleado, Restaurante, Sucursal } from '../models/index.js';
+import { sequelize, Categoria, Producto, Cliente, Empleado, Restaurante, Sucursal, ClienteRestaurante } from '../models/index.js';
 import bcrypt from 'bcryptjs';
 
 const seed = async () => {
@@ -378,8 +378,8 @@ const seed = async () => {
       });
     }
 
-    // 5. Crear Cliente de prueba si no existe
-    await Cliente.findOrCreate({
+    // 5. Crear Cliente de prueba si no existe, afiliado al restaurante inicial (RF-43)
+    const [cliente] = await Cliente.findOrCreate({
       where: { correo_electronico: 'cliente@logrod.com' },
       defaults: {
         identificacion: '1003003003',
@@ -389,6 +389,10 @@ const seed = async () => {
         tipo_cliente: 'Estudiante',
         contrasenia: passwordCliente
       }
+    });
+    await ClienteRestaurante.findOrCreate({
+      where: { cliente_id: cliente.id, restaurante_id: restaurante.id },
+      defaults: { estado: 'activo', origen: 'app', legal_version: 'semilla', afiliado_en: new Date() }
     });
 
     console.log('¡Siembra de datos (seeding) finalizada exitosamente con catálogo completo!');

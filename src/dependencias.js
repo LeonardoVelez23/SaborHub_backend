@@ -18,6 +18,8 @@ import { crearCredencialRepository } from './repositories/credencialRepository.j
 import { crearCarritoRepository } from './repositories/carritoRepository.js';
 import { crearSucursalRepository } from './repositories/sucursalRepository.js';
 import { crearRestauranteRepository } from './repositories/restauranteRepository.js';
+import { crearAfiliacionRepository } from './repositories/afiliacionRepository.js';
+import { crearAfiliacionService } from './services/afiliacionService.js';
 import { crearRestauranteService, crearSucursalService } from './services/restauranteService.js';
 import { crearPedidoService } from './services/pedidoService.js';
 import { crearPagoService } from './services/pagoService.js';
@@ -65,7 +67,8 @@ const repositorios = {
   credenciales: crearCredencialRepository(modelos),
   carritos: crearCarritoRepository(modelos),
   sucursales: crearSucursalRepository(modelos),
-  restaurantes: crearRestauranteRepository(modelos)
+  restaurantes: crearRestauranteRepository(modelos),
+  afiliaciones: crearAfiliacionRepository(modelos)
 };
 
 const contrasenias = crearContrasenias(bcrypt);
@@ -76,7 +79,11 @@ const otps = otpService;
 /** Cambiar de pasarela = cambiar esta línea (contrato en pasarelas/pasarelaPago.js). */
 const pasarela = crearPasarelaPayphone(config.payphone);
 
+/** Clientes por restaurante (DERCAS 12, RF-43 a RF-45). */
+export const afiliacionService = crearAfiliacionService({ ...repositorios, versionLegal: VERSION_LEGAL });
+
 export const pedidoService = crearPedidoService({
+  afiliacion: afiliacionService,
   ...repositorios,
   transacciones,
   reloj: () => ahoraLocal()
@@ -105,6 +112,7 @@ export const pagoTarjetaService = crearPagoTarjetaService({
 
 export const clienteService = crearClienteService({
   ...repositorios,
+  afiliacion: afiliacionService,
   otps,
   contrasenias,
   versionLegal: VERSION_LEGAL

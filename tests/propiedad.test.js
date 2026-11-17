@@ -6,6 +6,7 @@ import {
   crearCliente,
   crearEmpleado,
   crearPedido,
+  afiliar,
   limpiarBase,
   login
 } from './helpers.js';
@@ -38,9 +39,10 @@ describe('Clientes solo acceden a lo suyo', () => {
       expect(res.body.data).not.toHaveProperty('reset_password_token');
     });
 
-    it('el admin ve cualquier perfil', async () => {
-      const res = await api().get(`/api/v1/clientes/${beto.id}`).set(auth(tokenAdmin));
-      expect(res.status).toBe(200);
+    it('el admin ve el perfil de un cliente de su restaurante, no el de otro (RN-26)', async () => {
+      expect((await api().get(`/api/v1/clientes/${beto.id}`).set(auth(tokenAdmin))).status).toBe(404);
+      await afiliar(beto);
+      expect((await api().get(`/api/v1/clientes/${beto.id}`).set(auth(tokenAdmin))).status).toBe(200);
     });
   });
 

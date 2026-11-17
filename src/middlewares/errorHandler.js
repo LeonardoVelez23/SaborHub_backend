@@ -12,7 +12,7 @@ const clasificar = (err) => {
   // Reglas de negocio de los servicios: su mensaje es para el usuario,
   // también en 502/503 (pasarela de pago caída o sin configurar).
   if (err instanceof ErrorNegocio) {
-    return { status: err.status, message: err.message, publico: true };
+    return { status: err.status, message: err.message, publico: true, codigo: err.codigo, datos: err.datos };
   }
   if (err instanceof RegistroDuplicado) return { status: 400, message: err.message };
   if (err.type === 'entity.parse.failed') {
@@ -48,7 +48,7 @@ const clasificar = (err) => {
 };
 
 export const errorHandler = (err, req, res, _next) => {
-  const { status, message, publico = false } = clasificar(err);
+  const { status, message, publico = false, codigo, datos } = clasificar(err);
   const enDesarrollo = process.env.NODE_ENV === 'development';
   const interno = status >= 500 && !publico;
 
@@ -57,6 +57,8 @@ export const errorHandler = (err, req, res, _next) => {
   res.status(status).json({
     success: false,
     message: interno && !enDesarrollo ? MENSAJE_INTERNO : message,
+    ...(codigo && { codigo }),
+    ...(datos && { data: datos }),
     ...(enDesarrollo && interno && { stack: err.stack })
   });
 };

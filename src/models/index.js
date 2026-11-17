@@ -12,6 +12,7 @@ import CredencialBiometrica from './CredencialBiometrica.js';
 import CarritoItem from './CarritoItem.js';
 import Restaurante from './Restaurante.js';
 import Sucursal from './Sucursal.js';
+import ClienteRestaurante from './ClienteRestaurante.js';
 
 // --- Asociaciones ---
 
@@ -89,6 +90,12 @@ CarritoItem.belongsTo(Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
 Producto.hasMany(CarritoItem, { foreignKey: 'producto_id', as: 'enCarritos', onDelete: 'CASCADE' });
 CarritoItem.belongsTo(Producto, { foreignKey: 'producto_id', as: 'producto' });
 
+// Cliente <-> Restaurante: afiliación por restaurante (DERCAS 12, RF-43)
+Cliente.hasMany(ClienteRestaurante, { foreignKey: 'cliente_id', as: 'afiliaciones', onDelete: 'CASCADE' });
+ClienteRestaurante.belongsTo(Cliente, { foreignKey: 'cliente_id', as: 'cliente' });
+Restaurante.hasMany(ClienteRestaurante, { foreignKey: 'restaurante_id', as: 'afiliaciones' });
+ClienteRestaurante.belongsTo(Restaurante, { foreignKey: 'restaurante_id', as: 'restaurante' });
+
 // Al cambiar la contraseña (también al restablecerla o eliminar la cuenta)
 // se revoca el ingreso con huella en todos los dispositivos.
 Cliente.addHook('afterUpdate', async (cliente, options) => {
@@ -115,5 +122,6 @@ export {
   CredencialBiometrica,
   CarritoItem,
   Restaurante,
-  Sucursal
+  Sucursal,
+  ClienteRestaurante
 };

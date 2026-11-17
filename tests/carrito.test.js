@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CarritoItem } from '../src/models/index.js';
-import { api, auth, crearCliente, crearEmpleado, crearProducto, limpiarBase, login, PASSWORD } from './helpers.js';
+import { afiliar, api, auth, crearCliente, crearEmpleado, crearProducto, limpiarBase, login, PASSWORD } from './helpers.js';
 
 describe('Carrito en el servidor (RF-13)', () => {
   let ana, token, arroz, jugo;
@@ -8,6 +8,7 @@ describe('Carrito en el servidor (RF-13)', () => {
   beforeEach(async () => {
     await limpiarBase();
     ana = await crearCliente();
+    await afiliar(ana);
     token = await login(ana);
     arroz = await crearProducto({ nombre: 'Arroz', precio: 3, cantidad_disponible: 10, imagen_codigo: 'arroz' });
     jugo = await crearProducto({ nombre: 'Jugo', precio: 1, cantidad_disponible: 5 });
