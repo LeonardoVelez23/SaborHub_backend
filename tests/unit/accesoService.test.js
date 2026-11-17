@@ -68,18 +68,19 @@ describe('Inicio de sesión y recuperación (RF-02, RF-05)', () => {
 });
 
 describe('Sesión vigente', () => {
-  it('una cuenta eliminada o un empleado borrado pierden la sesión', async () => {
+  it('rol y sucursal salen de la base; una cuenta eliminada pierde la sesión', async () => {
     const sesion = crearSesionService({
       cuentas: {
         clienteDeSesion: async (id) => ({ 1: { eliminado_en: null }, 2: { eliminado_en: new Date() } })[id] ?? null,
-        empleadoDeSesion: async (id) => (id === 7 ? { cargo: 'Cajero' } : null)
+        empleadoDeSesion: async (id) => (id === 7 ? { cargo: 'Cajero', restaurante_id: 4, sucursal_id: 9 } : null)
       },
       rolDeCargo: (c) => c.toLowerCase()
     });
-    expect(await sesion.rolVigente({ id: 1, rol: 'cliente' })).toBe('cliente');
-    expect(await sesion.rolVigente({ id: 2, rol: 'cliente' })).toBeNull();
-    expect(await sesion.rolVigente({ id: 7, rol: 'admin' })).toBe('cajero'); // rol de la base, no del token
-    expect(await sesion.rolVigente({ id: 8, rol: 'admin' })).toBeNull();
+    expect(await sesion.vigente({ id: 1, rol: 'cliente' })).toEqual({ rol: 'cliente', restaurante_id: null, sucursal_id: null });
+    expect(await sesion.vigente({ id: 2, rol: 'cliente' })).toBeNull();
+    // Rol y alcance de la base, no del token.
+    expect(await sesion.vigente({ id: 7, rol: 'admin' })).toEqual({ rol: 'cajero', restaurante_id: 4, sucursal_id: 9 });
+    expect(await sesion.vigente({ id: 8, rol: 'admin' })).toBeNull();
   });
 });
 

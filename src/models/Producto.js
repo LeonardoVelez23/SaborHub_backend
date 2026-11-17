@@ -10,10 +10,15 @@ Producto.init({
     primaryKey: true,
     autoIncrement: true
   },
+  // Único en la sucursal.
   codigo: {
     type: DataTypes.STRING(50),
+    allowNull: false
+  },
+  sucursal_id: {
+    type: DataTypes.INTEGER,
     allowNull: false,
-    unique: true
+    references: { model: 'Sucursales', key: 'id' }
   },
   nombre: {
     type: DataTypes.STRING(150),
@@ -60,7 +65,8 @@ Producto.init({
   sequelize,
   modelName: 'Producto',
   tableName: 'Productos',
-  timestamps: true
+  timestamps: true,
+  indexes: [{ unique: true, fields: ['sucursal_id', 'codigo'] }]
 });
 
 export default Producto;

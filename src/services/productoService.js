@@ -1,5 +1,6 @@
 import { ErrorNegocio } from '../errors/ErrorNegocio.js';
 import { RegistroDuplicado } from '../errors/RegistroDuplicado.js';
+import { sucursalDelPersonal } from './alcance.js';
 
 export const ESTADOS_PRODUCTO = ['disponible', 'no disponible'];
 
@@ -39,7 +40,7 @@ const validarValores = ({ precio, cantidad_disponible, estado, imagen_codigo }) 
   return imagenCodigo;
 };
 
-/** El código de producto es único (RN-17). */
+/** El código de producto es único en la sucursal (RN-17). */
 const unico = async (operacion) => {
   try {
     return await operacion();
@@ -53,8 +54,12 @@ const noEncontrado = () => new ErrorNegocio('Producto no encontrado', 404);
 
 /** Productos del menú (RF-10 a RF-12). */
 export const crearProductoService = ({ productos, categorias }) => {
-  const categoriaExistente = async (id) => {
-    if (!(await categorias.buscar(id))) throw new ErrorNegocio('La categoría indicada no existe');
+  /** La categoría existe y es de la misma sucursal que el producto. */
+  const categoriaDeSucursal = async (id, sucursalId) => {
+    const categoria = await categorias.buscar(id);
+    if (!categoria || categoria.sucursal_id !== sucursalId) {
+      throw new ErrorNegocio('La categoría indicada no existe');
+    }
   };
 
   return {
@@ -66,13 +71,15 @@ export const crearProductoService = ({ productos, categorias }) => {
       return producto;
     },
 
-    crear: async (datos) => {
+    /** En la sucursal de quien lo crea. */
+    crear: async (usuario, datos) => {
       const { codigo, nombre, descripcion, precio, cantidad_disponible, estado, categoria_id } = datos;
       if (!codigo || !nombre || precio === undefined || !categoria_id) {
         throw new ErrorNegocio('Los campos codigo, nombre, precio y categoria_id son obligatorios');
       }
       const imagenCodigo = validarValores(datos);
-      await categoriaExistente(categoria_id);
+      const sucursalId = sucursalDelPersonal(usuario);
+      await categoriaDeSucursal(categoria_id, sucursalId);
 
       const producto = await unico(() =>
         productos.crear({
@@ -83,7 +90,8 @@ export const crearProductoService = ({ productos, categorias }) => {
           cantidad_disponible: cantidad_disponible ?? 0,
           estado: estado || 'disponible',
           categoria_id,
-          imagen_codigo: imagenCodigo ?? null
+          imagen_codigo: imagenCodigo ?? null,
+          sucursal_id: sucursalId
         })
       );
       return productos.buscarConCategoria(producto.id);
@@ -94,7 +102,7 @@ export const crearProductoService = ({ productos, categorias }) => {
       const producto = await productos.buscar(id);
       if (!producto) throw noEncontrado();
       const imagenCodigo = validarValores(datos);
-      if (categoria_id) await categoriaExistente(categoria_id);
+      if (categoria_id) await categoriaDeSucursal(categoria_id, producto.sucursal_id);
 
       await unico(() =>
         productos.actualizar(producto, {

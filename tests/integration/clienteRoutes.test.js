@@ -8,7 +8,7 @@ import { VERSION_LEGAL } from '../../src/legal/documentos.js';
 // verifyToken consulta el rol vigente en la base; aquí los modelos son
 // simulados, así que se confía en el rol del token.
 vi.mock('../../src/services/sesionService.js', () => ({
-  crearSesionService: () => ({ rolVigente: async ({ rol }) => rol })
+  crearSesionService: () => ({ vigente: async ({ rol }) => ({ rol, restaurante_id: 1, sucursal_id: 1 }) })
 }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'jwt_secret_resto_logrod_2026';

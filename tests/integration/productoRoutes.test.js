@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 // verifyToken consulta el rol vigente en la base; aquí los modelos son
 // simulados, así que se confía en el rol del token.
 vi.mock('../../src/services/sesionService.js', () => ({
-  crearSesionService: () => ({ rolVigente: async ({ rol }) => rol })
+  crearSesionService: () => ({ vigente: async ({ rol }) => ({ rol, restaurante_id: 1, sucursal_id: 1 }) })
 }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'jwt_secret_resto_logrod_2026';
@@ -73,7 +73,7 @@ describe('Producto Routes (/api/v1/productos)', () => {
 
   describe('POST /api/v1/productos', () => {
     it('debe crear un producto si el usuario es admin', async () => {
-      Categoria.findByPk.mockResolvedValue({ id: 1, nombre: 'Comida' });
+      Categoria.findByPk.mockResolvedValue({ id: 1, nombre: 'Comida', sucursal_id: 1 });
       const mockProd = { id: 2, codigo: 'PROD-001', nombre: 'Taco', precio: 2.5, categoria_id: 1 };
       Producto.create.mockResolvedValue(mockProd);
 

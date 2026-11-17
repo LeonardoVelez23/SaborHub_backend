@@ -20,7 +20,7 @@ export const getEmpleadoById = async (req, res, next) => {
 
 export const createEmpleado = async (req, res, next) => {
   try {
-    const data = await empleadoService.crear(req.body ?? {});
+    const data = await empleadoService.crear(req.user, req.body ?? {});
     res.status(201).json({ success: true, message: 'Empleado creado correctamente', data });
   } catch (error) {
     next(error);

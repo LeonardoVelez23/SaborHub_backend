@@ -59,6 +59,12 @@ Pedido.init({
       model: 'Empleados',
       key: 'id'
     }
+  },
+  // Sucursal de sus productos (RN-20).
+  sucursal_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: { model: 'Sucursales', key: 'id' }
   }
 }, {
   sequelize,

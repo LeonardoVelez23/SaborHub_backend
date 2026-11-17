@@ -1,4 +1,5 @@
 import { ErrorNegocio } from '../errors/ErrorNegocio.js';
+import { sucursalDeProductos } from './alcance.js';
 import {
   ESTADOS,
   ESTADOS_CON_RESPONSABLE,
@@ -36,10 +37,11 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, transa
     const filas = await productos.bloquear(cantidades.keys(), t);
     const porId = new Map(filas.map((p) => [p.id, p]));
     const resultado = calcularLineas(cantidades, porId);
+    const sucursalId = sucursalDeProductos(filas);
     for (const { producto_id: id, cantidad } of resultado.lineas) {
       await productos.descontar(porId.get(id), cantidad, t);
     }
-    return resultado;
+    return { ...resultado, sucursalId };
   };
 
   /** Devuelve al stock las cantidades de las líneas (RN-04, RN-05). */
@@ -96,7 +98,7 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, transa
           ? null
           : await empleadoValido(empleado_preparacion_id, 'empleado_preparacion_id', t);
 
-        const { lineas, total } = await reservarStock(cantidades, t);
+        const { lineas, total, sucursalId } = await reservarStock(cantidades, t);
         const { fecha, hora } = reloj();
 
         const pedido = await pedidos.crear(
@@ -108,7 +110,8 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, transa
             valor_total: total,
             cliente_id: cliente.id,
             empleado_id: empleadoId,
-            empleado_preparacion_id: preparacionId
+            empleado_preparacion_id: preparacionId,
+            sucursal_id: sucursalId
           },
           t
         );

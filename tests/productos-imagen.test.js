@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Categoria } from '../src/models/index.js';
-import { api, auth, crearEmpleado, crearProducto, limpiarBase, login } from './helpers.js';
+import { api, auth, crearEmpleado, crearProducto, crearSucursal, limpiarBase, login } from './helpers.js';
 
 // Las imágenes viven en los assets de la app móvil; la API solo guarda y
 // envía el nombre del archivo (`imagen_codigo`), sin URL ni subida.
@@ -10,7 +10,7 @@ describe('Productos: imagen_codigo', () => {
   beforeEach(async () => {
     await limpiarBase();
     token = await login(await crearEmpleado('admin'));
-    categoria = await Categoria.create({ nombre: 'Platos Fuertes' });
+    categoria = await Categoria.create({ nombre: 'Platos Fuertes', sucursal_id: (await crearSucursal()).id });
   });
 
   const nuevo = (datos = {}) => ({

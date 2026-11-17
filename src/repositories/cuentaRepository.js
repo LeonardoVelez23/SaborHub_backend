@@ -27,7 +27,8 @@ export const crearCuentaRepository = (m) => {
 
     /** Lo mínimo para validar una sesión. */
     clienteDeSesion: (id) => m.Cliente.findByPk(id, { attributes: ['id', 'eliminado_en'] }),
-    empleadoDeSesion: (id) => m.Empleado.findByPk(id, { attributes: ['id', 'cargo'] }),
+    empleadoDeSesion: (id) =>
+      m.Empleado.findByPk(id, { attributes: ['id', 'cargo', 'restaurante_id', 'sucursal_id'] }),
 
     actualizar: (cuenta, datos) => cuenta.update(datos),
 

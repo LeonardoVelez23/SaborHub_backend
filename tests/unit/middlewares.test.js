@@ -6,7 +6,7 @@ import { errorHandler } from '../../src/middlewares/errorHandler.js';
 
 // verifyToken consulta el rol vigente en la base; aquí se simula.
 vi.mock('../../src/services/sesionService.js', () => ({
-  crearSesionService: () => ({ rolVigente: async ({ rol }) => rol })
+  crearSesionService: () => ({ vigente: async ({ rol }) => ({ rol, restaurante_id: 1, sucursal_id: 1 }) })
 }));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'jwt_secret_resto_logrod_2026';

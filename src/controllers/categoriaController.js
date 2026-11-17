@@ -20,7 +20,7 @@ export const getCategoriaById = async (req, res, next) => {
 
 export const createCategoria = async (req, res, next) => {
   try {
-    const data = await categoriaService.crear(req.body ?? {});
+    const data = await categoriaService.crear(req.user, req.body ?? {});
     res.status(201).json({ success: true, message: 'Categoría creada correctamente', data });
   } catch (error) {
     next(error);

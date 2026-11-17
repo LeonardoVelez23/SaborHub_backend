@@ -1,16 +1,25 @@
-import { sequelize, Categoria, Producto, Cliente, Empleado } from '../models/index.js';
+import { sequelize, Categoria, Producto, Cliente, Empleado, Restaurante, Sucursal } from '../models/index.js';
 import bcrypt from 'bcryptjs';
 
 const seed = async () => {
   try {
     console.log('Iniciando la siembra de datos (seeding)...');
 
+    // 0. Restaurante y sucursal iniciales (los crea también la migración).
+    const [restaurante] = await Restaurante.findOrCreate({ where: { nombre: 'Sabor Politécnico' } });
+    const [sucursal] = await Sucursal.findOrCreate({
+      where: { restaurante_id: restaurante.id, nombre: 'Principal' },
+      defaults: { direccion: 'Por definir' }
+    });
+    const alcance = { restaurante_id: restaurante.id, sucursal_id: sucursal.id };
+
     // 1. Crear / Buscar Categorías
     console.log('Creando / verificando categorías...');
-    const [catEntradas] = await Categoria.findOrCreate({ where: { nombre: 'Entradas' } });
-    const [catPlatosFuertes] = await Categoria.findOrCreate({ where: { nombre: 'Platos Fuertes' } });
-    const [catPostres] = await Categoria.findOrCreate({ where: { nombre: 'Postres' } });
-    const [catBebidas] = await Categoria.findOrCreate({ where: { nombre: 'Bebidas' } });
+    const categoria = (nombre) => Categoria.findOrCreate({ where: { nombre, sucursal_id: sucursal.id } });
+    const [catEntradas] = await categoria('Entradas');
+    const [catPlatosFuertes] = await categoria('Platos Fuertes');
+    const [catPostres] = await categoria('Postres');
+    const [catBebidas] = await categoria('Bebidas');
 
     // 2. Definir Productos para todas las categorías
     console.log('Creando / actualizando catálogo de productos...');
@@ -246,8 +255,8 @@ const seed = async () => {
 
     for (const prodData of listaProductos) {
       const [prod, created] = await Producto.findOrCreate({
-        where: { codigo: prodData.codigo },
-        defaults: prodData
+        where: { codigo: prodData.codigo, sucursal_id: sucursal.id },
+        defaults: { ...prodData, sucursal_id: sucursal.id }
       });
 
       if (!created) {
@@ -274,7 +283,8 @@ const seed = async () => {
         telefono: '3001234567',
         cargo: 'admin',
         turno_trabajo: 'Completo',
-        contrasenia: passwordAdmin
+        contrasenia: passwordAdmin,
+        ...alcance
       }
     });
 
@@ -364,7 +374,7 @@ const seed = async () => {
     for (const empData of empleadosIniciales) {
       await Empleado.findOrCreate({
         where: { correo_electronico: empData.correo_electronico },
-        defaults: empData
+        defaults: { ...empData, ...alcance }
       });
     }
 

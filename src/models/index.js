@@ -10,8 +10,24 @@ import FotoPerfil from './FotoPerfil.js';
 import TransaccionPayphone from './TransaccionPayphone.js';
 import CredencialBiometrica from './CredencialBiometrica.js';
 import CarritoItem from './CarritoItem.js';
+import Restaurante from './Restaurante.js';
+import Sucursal from './Sucursal.js';
 
 // --- Asociaciones ---
+
+// Restaurante -> Sucursal -> menú, pedidos y personal (DERCAS 12)
+Restaurante.hasMany(Sucursal, { foreignKey: 'restaurante_id', as: 'sucursales' });
+Sucursal.belongsTo(Restaurante, { foreignKey: 'restaurante_id', as: 'restaurante' });
+Sucursal.hasMany(Categoria, { foreignKey: 'sucursal_id', as: 'categorias' });
+Categoria.belongsTo(Sucursal, { foreignKey: 'sucursal_id', as: 'sucursal' });
+Sucursal.hasMany(Producto, { foreignKey: 'sucursal_id', as: 'productos' });
+Producto.belongsTo(Sucursal, { foreignKey: 'sucursal_id', as: 'sucursal' });
+Sucursal.hasMany(Pedido, { foreignKey: 'sucursal_id', as: 'pedidos' });
+Pedido.belongsTo(Sucursal, { foreignKey: 'sucursal_id', as: 'sucursal' });
+Restaurante.hasMany(Empleado, { foreignKey: 'restaurante_id', as: 'empleados' });
+Empleado.belongsTo(Restaurante, { foreignKey: 'restaurante_id', as: 'restaurante' });
+Sucursal.hasMany(Empleado, { foreignKey: 'sucursal_id', as: 'empleados' });
+Empleado.belongsTo(Sucursal, { foreignKey: 'sucursal_id', as: 'sucursal' });
 
 // Categoria <-> Producto (Uno a Muchos)
 Categoria.hasMany(Producto, { foreignKey: 'categoria_id', as: 'productos' });
@@ -97,5 +113,7 @@ export {
   FotoPerfil,
   TransaccionPayphone,
   CredencialBiometrica,
-  CarritoItem
+  CarritoItem,
+  Restaurante,
+  Sucursal
 };

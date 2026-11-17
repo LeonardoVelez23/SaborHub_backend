@@ -11,14 +11,20 @@ Categoria.init({
   },
   nombre: {
     type: DataTypes.STRING(100),
+    allowNull: false
+  },
+  // Cada sucursal tiene su propio menú; el nombre es único en la sucursal.
+  sucursal_id: {
+    type: DataTypes.INTEGER,
     allowNull: false,
-    unique: true
+    references: { model: 'Sucursales', key: 'id' }
   }
 }, {
   sequelize,
   modelName: 'Categoria',
   tableName: 'Categorias',
-  timestamps: true
+  timestamps: true,
+  indexes: [{ unique: true, fields: ['sucursal_id', 'nombre'] }]
 });
 
 export default Categoria;

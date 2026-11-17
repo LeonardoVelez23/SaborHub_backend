@@ -1,5 +1,6 @@
 import { ErrorNegocio } from '../errors/ErrorNegocio.js';
 import { RegistroDuplicado } from '../errors/RegistroDuplicado.js';
+import { sucursalDelPersonal } from './alcance.js';
 
 const noEncontrada = () => new ErrorNegocio('Categoría no encontrada', 404);
 
@@ -11,7 +12,7 @@ const nombreValido = (nombre) => {
   return nombre.trim();
 };
 
-/** El nombre de la categoría es único (RN-17). */
+/** El nombre de la categoría es único en la sucursal (RN-17). */
 const unico = async (operacion) => {
   try {
     return await operacion();
@@ -31,9 +32,11 @@ export const crearCategoriaService = ({ categorias }) => ({
     return categoria;
   },
 
-  crear: async ({ nombre }) => {
+  /** En la sucursal de quien la crea; el nombre es único en la sucursal. */
+  crear: async (usuario, { nombre }) => {
     const limpio = nombreValido(nombre);
-    return unico(() => categorias.crear({ nombre: limpio }));
+    const sucursalId = sucursalDelPersonal(usuario);
+    return unico(() => categorias.crear({ nombre: limpio, sucursal_id: sucursalId }));
   },
 
   actualizar: async (id, { nombre }) => {

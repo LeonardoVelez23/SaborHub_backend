@@ -29,8 +29,8 @@ const enMemoria = (campoUnico, filas = []) => {
 };
 
 const armar = () => {
-  const categorias = enMemoria('nombre', [{ id: 1, nombre: 'Bebidas' }]);
-  const productos = enMemoria('codigo', [{ id: 1, codigo: 'P001', nombre: 'Café', precio: 1.5, categoria_id: 1 }]);
+  const categorias = enMemoria('nombre', [{ id: 1, nombre: 'Bebidas', sucursal_id: 1 }, { id: 2, nombre: 'Otra sucursal', sucursal_id: 2 }]);
+  const productos = enMemoria('codigo', [{ id: 1, codigo: 'P001', nombre: 'Café', precio: 1.5, categoria_id: 1, sucursal_id: 1 }]);
   return {
     categorias,
     productos,
@@ -39,20 +39,27 @@ const armar = () => {
   };
 };
 
+/** Cajero de la sucursal 1. */
+const CAJERO = { id: 7, rol: 'cajero', restaurante_id: 1, sucursal_id: 1 };
+
 describe('Catálogo (RF-09 a RF-11, RN-17) sin base de datos', () => {
   it('crea un producto con valores por defecto y textos sin espacios sobrantes', async () => {
     const { productoService } = armar();
-    const p = await productoService.crear({ codigo: ' P002 ', nombre: ' Té ', precio: 2, categoria_id: 1 });
-    expect(p).toMatchObject({ codigo: 'P002', nombre: 'Té', estado: 'disponible', cantidad_disponible: 0, imagen_codigo: null });
+    const p = await productoService.crear(CAJERO, { codigo: ' P002 ', nombre: ' Té ', precio: 2, categoria_id: 1, sucursal_id: 99 });
+    // La sucursal sale de la sesión, no de los datos enviados.
+    expect(p).toMatchObject({ codigo: 'P002', nombre: 'Té', estado: 'disponible', cantidad_disponible: 0, imagen_codigo: null, sucursal_id: 1 });
   });
 
   it('rechaza precio 0, stock negativo, categoría inexistente y código repetido (CA-09)', async () => {
     const { productoService } = armar();
     const base = { codigo: 'P003', nombre: 'Agua', precio: 1, categoria_id: 1 };
-    await expect(productoService.crear({ ...base, precio: 0 })).rejects.toThrow('mayor a 0');
-    await expect(productoService.crear({ ...base, cantidad_disponible: -1 })).rejects.toThrow('negativa');
-    await expect(productoService.crear({ ...base, categoria_id: 9 })).rejects.toThrow('categoría indicada no existe');
-    await expect(productoService.crear({ ...base, codigo: 'P001' })).rejects.toThrow('Ya existe un producto con ese código');
+    await expect(productoService.crear(CAJERO, { ...base, precio: 0 })).rejects.toThrow('mayor a 0');
+    await expect(productoService.crear(CAJERO, { ...base, cantidad_disponible: -1 })).rejects.toThrow('negativa');
+    await expect(productoService.crear(CAJERO, { ...base, categoria_id: 9 })).rejects.toThrow('categoría indicada no existe');
+    // Categoría de otra sucursal: como si no existiera.
+    await expect(productoService.crear(CAJERO, { ...base, categoria_id: 2 })).rejects.toThrow('categoría indicada no existe');
+    await expect(productoService.crear({ id: 8, rol: 'cajero' }, base)).rejects.toMatchObject({ status: 403 });
+    await expect(productoService.crear(CAJERO, { ...base, codigo: 'P001' })).rejects.toThrow('Ya existe un producto con ese código');
   });
 
   it('valida el código de imagen y permite quitarlo (CA-10)', async () => {
@@ -77,9 +84,9 @@ describe('Catálogo (RF-09 a RF-11, RN-17) sin base de datos', () => {
 
   it('las categorías tienen nombre obligatorio y único', async () => {
     const { categoriaService } = armar();
-    await expect(categoriaService.crear({ nombre: '  ' })).rejects.toThrow('obligatorio');
-    await expect(categoriaService.crear({ nombre: 'Bebidas' })).rejects.toThrow('Ya existe una categoría con ese nombre');
-    expect(await categoriaService.crear({ nombre: ' Postres ' })).toMatchObject({ nombre: 'Postres' });
+    await expect(categoriaService.crear(CAJERO, { nombre: '  ' })).rejects.toThrow('obligatorio');
+    await expect(categoriaService.crear(CAJERO, { nombre: 'Bebidas' })).rejects.toThrow('Ya existe una categoría con ese nombre');
+    expect(await categoriaService.crear(CAJERO, { nombre: ' Postres ' })).toMatchObject({ nombre: 'Postres', sucursal_id: 1 });
     await expect(categoriaService.eliminar(9)).rejects.toMatchObject({ status: 404 });
   });
 });

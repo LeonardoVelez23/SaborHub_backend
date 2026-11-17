@@ -33,7 +33,8 @@ export const crearEmpleadoService = ({ empleados, otps, contrasenias }) => ({
     return empleado;
   },
 
-  crear: async (datos) => {
+  /** En el restaurante y la sucursal de quien lo crea. */
+  crear: async (usuario, datos) => {
     const { identificacion, nombres, apellidos, correo_electronico, telefono, cargo, turno_trabajo, contrasenia } =
       datos;
     if (!identificacion || !nombres || !apellidos || !correo_electronico || !contrasenia) {
@@ -52,7 +53,9 @@ export const crearEmpleadoService = ({ empleados, otps, contrasenias }) => ({
         telefono: opcional(telefono),
         cargo: opcional(cargo),
         turno_trabajo: opcional(turno_trabajo),
-        contrasenia: await contrasenias.hash(contrasenia)
+        contrasenia: await contrasenias.hash(contrasenia),
+        restaurante_id: usuario?.restaurante_id ?? null,
+        sucursal_id: usuario?.sucursal_id ?? null
       })
     );
     return sinContrasenia(empleado);

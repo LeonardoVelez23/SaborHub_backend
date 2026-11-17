@@ -23,13 +23,14 @@ export const verifyToken = async (req, res, next) => {
   }
 
   try {
-    const rol = await sesionService.rolVigente(decoded);
-    if (!rol) {
+    const vigente = await sesionService.vigente(decoded);
+    if (!vigente) {
       return noAutorizado(res, 'La sesión ya no es válida. Inicia sesión de nuevo.');
     }
 
-    // Contiene id, identificacion, nombres, apellidos, correo_electronico y rol.
-    req.user = { ...decoded, rol };
+    // id, identificacion, nombres, apellidos y correo_electronico del token;
+    // rol, restaurante_id y sucursal_id vigentes (de la base).
+    req.user = { ...decoded, ...vigente };
     next();
   } catch (error) {
     next(error);

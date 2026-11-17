@@ -1,16 +1,23 @@
 /**
- * Validez de una sesión abierta. El rol se lee de la base en cada petición:
- * un cambio de cargo aplica en la siguiente y una cuenta eliminada pierde
- * el acceso aunque su token no haya vencido.
+ * Validez de una sesión abierta. El rol y el alcance (restaurante y
+ * sucursal del personal) se leen de la base en cada petición: un cambio de
+ * cargo o de sucursal aplica en la siguiente y una cuenta eliminada pierde
+ * el acceso aunque su token no haya vencido. El alcance nunca sale de un
+ * parámetro del cliente (RN-21).
  */
 export const crearSesionService = ({ cuentas, rolDeCargo }) => ({
-  /** Rol vigente del usuario del token, o null si ya no existe. */
-  rolVigente: async ({ id, rol }) => {
+  /** {rol, restaurante_id, sucursal_id} vigentes, o null si el usuario ya no existe. */
+  vigente: async ({ id, rol }) => {
     if (rol === 'cliente') {
       const cliente = await cuentas.clienteDeSesion(id);
-      return cliente && !cliente.eliminado_en ? 'cliente' : null;
+      return cliente && !cliente.eliminado_en ? { rol: 'cliente', restaurante_id: null, sucursal_id: null } : null;
     }
     const empleado = await cuentas.empleadoDeSesion(id);
-    return empleado ? rolDeCargo(empleado.cargo) : null;
+    if (!empleado) return null;
+    return {
+      rol: rolDeCargo(empleado.cargo),
+      restaurante_id: empleado.restaurante_id ?? null,
+      sucursal_id: empleado.sucursal_id ?? null
+    };
   }
 });

@@ -9,7 +9,7 @@ import { otpService } from '../../src/dependencias.js';
 // verifyToken consulta el rol vigente en la base; aquí los modelos son
 // simulados, así que se confía en el rol del token.
 vi.mock('../../src/services/sesionService.js', () => ({
-  crearSesionService: () => ({ rolVigente: async ({ rol }) => rol })
+  crearSesionService: () => ({ vigente: async ({ rol }) => ({ rol, restaurante_id: 1, sucursal_id: 1 }) })
 }));
 
 vi.mock('../../src/models/index.js', () => {

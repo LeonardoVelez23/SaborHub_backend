@@ -74,6 +74,18 @@ Empleado.init({
     type: DataTypes.INTEGER,
     allowNull: false,
     defaultValue: 0
+  },
+  // Alcance (DERCAS 12): null solo para el superadmin de la plataforma.
+  restaurante_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: 'Restaurantes', key: 'id' }
+  },
+  // null para el administrador de restaurante (ve todas sus sucursales).
+  sucursal_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: 'Sucursales', key: 'id' }
   }
 }, {
   sequelize,

@@ -8,7 +8,9 @@ import {
   Cliente,
   Empleado,
   Pedido,
-  DetallePedido
+  DetallePedido,
+  Restaurante,
+  Sucursal
 } from '../src/models/index.js';
 
 export const api = () => request(app);
@@ -18,6 +20,20 @@ export const limpiarBase = () => sequelize.truncate({ cascade: true, restartIden
 
 let contador = 0;
 const siguiente = () => ++contador;
+
+/**
+ * Sucursal de prueba (la primera que haya, o una nueva). Con `nueva: true`
+ * crea otra sucursal en otro restaurante (tests de aislamiento).
+ */
+export const crearSucursal = async ({ nueva = false } = {}) => {
+  if (!nueva) {
+    const existente = await Sucursal.findOne({ order: [['id', 'ASC']] });
+    if (existente) return existente;
+  }
+  const n = siguiente();
+  const restaurante = await Restaurante.create({ nombre: `Restaurante${n}` });
+  return Sucursal.create({ restaurante_id: restaurante.id, nombre: `Sucursal${n}`, direccion: 'Calle de prueba' });
+};
 
 export const crearCliente = async (datos = {}) => {
   const n = siguiente();
@@ -34,7 +50,10 @@ export const crearCliente = async (datos = {}) => {
 
 export const crearEmpleado = async (cargo, datos = {}) => {
   const n = siguiente();
+  const sucursal = await crearSucursal();
   return Empleado.create({
+    restaurante_id: sucursal.restaurante_id,
+    sucursal_id: sucursal.id,
     identificacion: `09000000${n}`.slice(-10),
     nombres: `Empleado${n}`,
     apellidos: 'Prueba',
@@ -55,8 +74,10 @@ export const login = async (usuario) => {
 
 export const crearProducto = async (datos = {}) => {
   const n = siguiente();
-  const categoria = await Categoria.create({ nombre: `Categoria${n}` });
+  const sucursalId = datos.sucursal_id ?? (await crearSucursal()).id;
+  const categoria = await Categoria.create({ nombre: `Categoria${n}`, sucursal_id: sucursalId });
   return Producto.create({
+    sucursal_id: sucursalId,
     codigo: `P${n}`,
     nombre: `Producto${n}`,
     precio: 2.5,
@@ -77,7 +98,8 @@ export const crearPedido = async (cliente, { estado = 'solicitado', empleado = n
     estado,
     valor_total: 5,
     cliente_id: cliente.id,
-    empleado_id: empleado?.id ?? null
+    empleado_id: empleado?.id ?? null,
+    sucursal_id: producto.sucursal_id
   });
   await DetallePedido.create({
     pedido_id: pedido.id,

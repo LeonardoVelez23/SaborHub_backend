@@ -20,7 +20,7 @@ export const getProductoById = async (req, res, next) => {
 
 export const createProducto = async (req, res, next) => {
   try {
-    const data = await productoService.crear(req.body ?? {});
+    const data = await productoService.crear(req.user, req.body ?? {});
     res.status(201).json({ success: true, message: 'Producto creado correctamente', data });
   } catch (error) {
     next(error);

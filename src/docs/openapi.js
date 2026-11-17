@@ -110,7 +110,8 @@ export const openapi = {
         type: 'object',
         properties: {
           id: { type: 'integer' },
-          nombre: { type: 'string', maxLength: 100 },
+          nombre: { type: 'string', maxLength: 100, description: 'Único en la sucursal.' },
+          sucursal_id: { type: 'integer', description: 'Sucursal (DERCAS 12). La pone el servidor: la del personal que lo crea.' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' }
         }
@@ -119,13 +120,14 @@ export const openapi = {
         type: 'object',
         properties: {
           id: { type: 'integer' },
-          codigo: { type: 'string', maxLength: 50 },
+          codigo: { type: 'string', maxLength: 50, description: 'Único en la sucursal.' },
           nombre: { type: 'string', maxLength: 150 },
           descripcion: { type: ['string', 'null'] },
           precio: { type: 'number', exclusiveMinimum: 0 },
           cantidad_disponible: { type: 'integer', minimum: 0 },
           estado: { enum: ['disponible', 'no disponible'] },
-          categoria_id: { type: 'integer' },
+          categoria_id: { type: 'integer', description: 'Categoría de la misma sucursal.' },
+          sucursal_id: { type: 'integer', description: 'Sucursal (DERCAS 12). La pone el servidor: la del personal que lo crea.' },
           imagen_codigo: {
             type: ['string', 'null'],
             pattern: '^[a-z0-9_]{1,60}$',
@@ -181,7 +183,9 @@ export const openapi = {
             type: ['string', 'null'],
             description: 'admin|administrador → admin; cajero, cocinero, mesero → ese rol; otro → empleado.'
           },
-          turno_trabajo: { type: ['string', 'null'], maxLength: 50 }
+          turno_trabajo: { type: ['string', 'null'], maxLength: 50 },
+          restaurante_id: { type: ['integer', 'null'], description: 'null solo para el superadmin de la plataforma.' },
+          sucursal_id: { type: ['integer', 'null'], description: 'null para el administrador de restaurante.' }
         }
       },
       Usuario: {
@@ -252,6 +256,7 @@ export const openapi = {
           cliente_id: { type: 'integer' },
           empleado_id: { type: ['integer', 'null'] },
           empleado_preparacion_id: { type: ['integer', 'null'] },
+          sucursal_id: { type: 'integer', description: 'La de sus productos (RN-20).' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
           cliente: {
@@ -444,6 +449,8 @@ export const openapi = {
       post: {
         tags: ['Catálogo'],
         summary: 'Crear categoría (RF-09)',
+        description: 'Se crea en la sucursal del usuario de la sesión (403 si no tiene sucursal).',
+        'x-reglas': ['RN-17', 'RN-21'],
         ...protegido(CAJA),
         ...cuerpo({ type: 'object', required: ['nombre'], properties: { nombre: { type: 'string' } } }),
         responses: { ...ok('Creada', ref('Categoria'), '201'), ...E400, ...E401, ...E403 }
@@ -476,7 +483,8 @@ export const openapi = {
       post: {
         tags: ['Catálogo'],
         summary: 'Crear producto (RF-10, RF-11)',
-        'x-reglas': ['RN-17'],
+        description: 'Se crea en la sucursal del usuario de la sesión (403 si no tiene); la categoría debe ser de esa sucursal.',
+        'x-reglas': ['RN-17', 'RN-21'],
         ...protegido(CAJA),
         ...cuerpo({ allOf: [ref('ProductoEntrada'), { required: ['codigo', 'nombre', 'precio', 'categoria_id'] }] }),
         responses: { ...ok('Creado', ref('Producto'), '201'), ...E400, ...E401, ...E403 }
@@ -581,6 +589,7 @@ export const openapi = {
       post: {
         tags: ['Usuarios'],
         summary: 'Crear empleado',
+        description: 'Queda en el restaurante y la sucursal del administrador que lo crea.',
         ...protegido(['admin']),
         ...cuerpo({
           type: 'object',
@@ -641,9 +650,10 @@ export const openapi = {
           'En una transacción: agrupa líneas del mismo producto, bloquea las filas de producto (SELECT ... FOR UPDATE, por id ascendente),',
           'valida existencia, disponibilidad y stock, descuenta el stock, calcula precio_unitario (precio vigente), subtotal y total (redondeo a 2 decimales).',
           'Estado inicial "solicitado"; fecha y hora del servidor. Si lo crea un cliente: cliente_id = el del token, sin empleados, y se vacía su carrito.',
-          'Si lo crea el personal: cliente_id obligatorio y empleado_id / empleado_preparacion_id opcionales.'
+          'Si lo crea el personal: cliente_id obligatorio y empleado_id / empleado_preparacion_id opcionales.',
+          'El pedido es de la sucursal de sus productos; todos deben ser de la misma sucursal (400 si no).'
         ].join(' '),
-        'x-reglas': ['RN-06', 'RN-07', 'RN-08', 'RN-19'],
+        'x-reglas': ['RN-06', 'RN-07', 'RN-08', 'RN-19', 'RN-20'],
         ...protegido(['cliente', 'admin', 'empleado', 'cajero', 'mesero']),
         ...cuerpo({
           type: 'object',
