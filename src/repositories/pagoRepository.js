@@ -1,15 +1,19 @@
 import { sinDuplicados } from '../errors/RegistroDuplicado.js';
+import { filtroSucursal } from './alcance.js';
 
 const PEDIDO_RESUMEN = ['id', 'fecha', 'valor_total', 'estado'];
 
 /** Acceso a Pagos. */
 export const crearPagoRepository = (m) => ({
-  listar: () =>
+  /** Del alcance: los pagos se filtran por la sucursal de su pedido. */
+  listar: (alcance) =>
     m.Pago.findAll({
       include: {
         model: m.Pedido,
         as: 'pedido',
         attributes: ['id', 'fecha', 'hora', 'valor_total', 'estado', 'modalidad'],
+        where: filtroSucursal(alcance),
+        required: true,
         include: { model: m.Cliente, as: 'cliente', attributes: ['id', 'nombres', 'apellidos', 'identificacion'] }
       },
       order: [['fecha', 'DESC']]
@@ -30,12 +34,14 @@ export const crearPagoRepository = (m) => ({
     }),
 
   /** Con el pedido y su cliente (para comprobar de quién es). */
-  buscarDetallado: (id) =>
+  buscarDetallado: (id, alcance) =>
     m.Pago.findByPk(id, {
       include: {
         model: m.Pedido,
         as: 'pedido',
         attributes: ['id', 'fecha', 'hora', 'valor_total', 'estado', 'modalidad', 'cliente_id'],
+        where: filtroSucursal(alcance),
+        required: true,
         include: {
           model: m.Cliente,
           as: 'cliente',
@@ -49,14 +55,24 @@ export const crearPagoRepository = (m) => ({
     m.Pago.findByPk(id, { include: { model: m.Pedido, as: 'pedido', attributes: PEDIDO_RESUMEN } }),
 
   /** Con el pedido completo (para validar contra su total y estado). */
-  buscarConPedido: (id) => m.Pago.findByPk(id, { include: { model: m.Pedido, as: 'pedido' } }),
+  buscarConPedido: (id, alcance) =>
+    m.Pago.findByPk(id, { include: { model: m.Pedido, as: 'pedido', where: filtroSucursal(alcance), required: true } }),
 
-  buscar: (id) => m.Pago.findByPk(id),
+  buscar: (id, alcance) =>
+    m.Pago.findByPk(id, {
+      include: { model: m.Pedido, as: 'pedido', attributes: ['id'], where: filtroSucursal(alcance), required: true }
+    }),
 
-  delPedido: (pedidoId) =>
+  delPedido: (pedidoId, alcance) =>
     m.Pago.findOne({
       where: { pedido_id: pedidoId },
-      include: { model: m.Pedido, as: 'pedido', attributes: PEDIDO_RESUMEN }
+      include: {
+        model: m.Pedido,
+        as: 'pedido',
+        attributes: PEDIDO_RESUMEN,
+        where: filtroSucursal(alcance),
+        required: true
+      }
     }),
 
   existeDelPedido: async (pedidoId) => Boolean(await m.Pago.findOne({ where: { pedido_id: pedidoId } })),

@@ -1,4 +1,5 @@
 import { Op } from 'sequelize';
+import { filtroSucursal } from './alcance.js';
 
 const ATRIBUTOS_CLIENTE = ['id', 'nombres', 'apellidos', 'identificacion', 'correo_electronico', 'telefono'];
 const ATRIBUTOS_EMPLEADO = ['id', 'nombres', 'apellidos', 'cargo'];
@@ -10,8 +11,11 @@ const filtroFechas = ({ desde, hasta } = {}) => {
   if (desde && hasta) return { fecha: { [Op.between]: [desde, hasta] } };
   if (desde) return { fecha: { [Op.gte]: desde } };
   if (hasta) return { fecha: { [Op.lte]: hasta } };
-  return undefined;
+  return {};
 };
+
+/** Pedidos del rango de fechas dentro del alcance (estadísticas). */
+const filtroPeriodo = ({ alcance, ...rango }) => ({ ...filtroFechas(rango), ...filtroSucursal(alcance) });
 
 /**
  * Acceso a Pedidos y DetallePedidos. Único lugar que conoce sus consultas:
@@ -45,9 +49,9 @@ export const crearPedidoRepository = (m) => {
 
   return {
     /** Con cliente, empleados y detalles; del más reciente al más antiguo. */
-    listar: ({ clienteId } = {}) =>
+    listar: ({ clienteId, alcance }) =>
       m.Pedido.findAll({
-        where: clienteId ? { cliente_id: clienteId } : {},
+        where: { ...(clienteId ? { cliente_id: clienteId } : {}), ...filtroSucursal(alcance) },
         include: includeCompleto(),
         order: [['createdAt', 'DESC']]
       }),
@@ -67,17 +71,18 @@ export const crearPedidoRepository = (m) => {
         order: [['id', 'DESC']]
       }),
 
-    buscarCompleto: (id, { conCategoria = false } = {}) =>
-      m.Pedido.findByPk(id, { include: includeCompleto({ conCategoria }) }),
+    buscarCompleto: (id, alcance, { conCategoria = false } = {}) =>
+      m.Pedido.findOne({ where: { id, ...filtroSucursal(alcance) }, include: includeCompleto({ conCategoria }) }),
 
-    buscar: (id, { atributos } = {}) =>
-      m.Pedido.findByPk(id, atributos ? { attributes: atributos } : undefined),
+    buscar: (id, alcance, { atributos } = {}) =>
+      m.Pedido.findOne({ where: { id, ...filtroSucursal(alcance) }, ...(atributos && { attributes: atributos }) }),
 
     /** Pedido con su pago (o null), sin bloquear. */
     buscarConPago: (id) => m.Pedido.findByPk(id, { include: { model: m.Pago, as: 'pago' } }),
 
     /** SELECT ... FOR UPDATE: nadie más lo cambia hasta terminar `t`. */
-    bloquear: (id, t) => m.Pedido.findByPk(id, { lock: t.LOCK.UPDATE, transaction: t }),
+    bloquear: (id, t, alcance) =>
+      m.Pedido.findOne({ where: { id, ...filtroSucursal(alcance) }, lock: t.LOCK.UPDATE, transaction: t }),
 
     crear: (datos, t) => m.Pedido.create(datos, { transaction: t }),
 
@@ -98,15 +103,18 @@ export const crearPedidoRepository = (m) => {
 
     // ------------------------------------------------ Estadísticas (RF-29+)
 
-    contar: (rango) => {
-      const where = filtroFechas(rango);
-      return m.Pedido.count(where ? { where } : undefined);
-    },
+    contar: (periodo) => m.Pedido.count({ where: filtroPeriodo(periodo) }),
+
+    /** Clientes distintos con pedidos en el alcance (sin fechas). */
+    contarClientes: (alcance) =>
+      m.Pedido.count({ distinct: true, col: 'cliente_id', where: filtroSucursal(alcance) }),
 
     /** Suma de pagos aprobados de los pedidos del rango (RN-13). */
-    ingresos: async (rango) => {
-      const where = filtroFechas(rango);
-      if (!where) return Number((await m.Pago.sum('valor', { where: { estado: 'aprobado' } })) || 0);
+    ingresos: async (periodo) => {
+      const where = filtroPeriodo(periodo);
+      if (Reflect.ownKeys(where).length === 0) {
+        return Number((await m.Pago.sum('valor', { where: { estado: 'aprobado' } })) || 0);
+      }
       const ids = (await m.Pedido.findAll({ where, attributes: ['id'] })).map((p) => p.id);
       if (ids.length === 0) return 0;
       const suma = await m.Pago.sum('valor', { where: { estado: 'aprobado', pedido_id: { [Op.in]: ids } } });
@@ -114,14 +122,14 @@ export const crearPedidoRepository = (m) => {
     },
 
     /** [{valor, cantidad}] por estado o por modalidad. */
-    contarPorColumna: async (columna, rango) =>
-      (await contarPor(columna, filtroFechas(rango))).map((fila) => ({
+    contarPorColumna: async (columna, periodo) =>
+      (await contarPor(columna, filtroPeriodo(periodo))).map((fila) => ({
         valor: fila[columna],
         cantidad: Number(fila.getDataValue('count'))
       })),
 
     /** Los más vendidos por unidades, sin pedidos cancelados. */
-    masVendidos: async (rango, limite) => {
+    masVendidos: async (periodo, limite) => {
       const filas = await m.DetallePedido.findAll({
         attributes: ['producto_id', [m.sequelize.fn('SUM', m.sequelize.col('cantidad')), 'total_vendido']],
         include: [
@@ -130,7 +138,7 @@ export const crearPedidoRepository = (m) => {
             model: m.Pedido,
             as: 'pedido',
             attributes: [],
-            where: { ...filtroFechas(rango), estado: { [Op.ne]: 'cancelado' } }
+            where: { ...filtroPeriodo(periodo), estado: { [Op.ne]: 'cancelado' } }
           }
         ],
         group: ['producto_id', 'producto.id'],

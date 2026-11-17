@@ -1,15 +1,22 @@
 import { sinDuplicados } from '../errors/RegistroDuplicado.js';
+import { filtroEmpleados } from './alcance.js';
 
 const SIN_CONTRASENIA = { exclude: ['contrasenia'] };
 
 /** Acceso a Empleados. `m` son los modelos (se leen al usarse). */
 export const crearEmpleadoRepository = (m) => ({
-  listar: () =>
-    m.Empleado.findAll({ attributes: SIN_CONTRASENIA, order: [['apellidos', 'ASC'], ['nombres', 'ASC']] }),
+  listar: (alcance) =>
+    m.Empleado.findAll({
+      where: filtroEmpleados(alcance),
+      attributes: SIN_CONTRASENIA,
+      order: [['apellidos', 'ASC'], ['nombres', 'ASC']]
+    }),
 
-  buscar: (id) => m.Empleado.findByPk(id),
+  /** Solo si está en el alcance (SIN_FILTRO para el propio perfil). */
+  buscar: (id, alcance) => m.Empleado.findOne({ where: { id, ...filtroEmpleados(alcance) } }),
 
-  buscarSinContrasenia: (id) => m.Empleado.findByPk(id, { attributes: SIN_CONTRASENIA }),
+  buscarSinContrasenia: (id, alcance) =>
+    m.Empleado.findOne({ where: { id, ...filtroEmpleados(alcance) }, attributes: SIN_CONTRASENIA }),
 
   crear: (datos) => sinDuplicados(() => m.Empleado.create(datos)),
 

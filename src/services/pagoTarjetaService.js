@@ -1,5 +1,6 @@
 import { ErrorNegocio } from '../errors/ErrorNegocio.js';
 import { aCentavos, comprobarPasarela } from './pasarelas/pasarelaPago.js';
+import { SIN_FILTRO } from './alcance.js';
 
 /** Solo un pago pendiente se puede reemplazar por el de la tarjeta. */
 const ESTADOS_PAGO_ABIERTOS = ['pendiente'];
@@ -49,7 +50,7 @@ export const crearPagoTarjetaService = ({
       const tx = await intentos.bloquear(intento.id, t);
       if (tx.estado === 'aprobada') return true;
 
-      const pedido = await pedidos.bloquear(tx.pedido_id, t);
+      const pedido = await pedidos.bloquear(tx.pedido_id, t, SIN_FILTRO);
       await intentos.actualizar(
         tx,
         {

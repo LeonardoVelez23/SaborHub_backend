@@ -3,6 +3,7 @@ import request from 'supertest';
 import app from '../../src/app.js';
 import { Empleado } from '../../src/models/index.js';
 import jwt from 'jsonwebtoken';
+import { delegarFindOne } from './alcanceMock.js';
 
 // verifyToken consulta el rol vigente en la base; aquí los modelos son
 // simulados, así que se confía en el rol del token.
@@ -19,6 +20,8 @@ vi.mock('../../src/models/index.js', () => ({
     findOne: vi.fn(),
     create: vi.fn()
   },
+  Sucursal: { findOne: vi.fn(async () => ({ id: 1, restaurante_id: 1, activa: true, restaurante: { estado: 'activo' } })) },
+  Restaurante: { findByPk: vi.fn(async () => ({ id: 1 })) },
   Cliente: { findOne: vi.fn() },
   Categoria: { findAll: vi.fn() },
   Producto: { findAll: vi.fn() },
@@ -34,6 +37,7 @@ describe('Empleado Routes (/api/v1/empleados)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    delegarFindOne(Empleado);
     adminToken = jwt.sign({ id: 99, rol: 'admin' }, JWT_SECRET);
     empleado1Token = jwt.sign({ id: 1, rol: 'mesero' }, JWT_SECRET);
     empleado2Token = jwt.sign({ id: 2, rol: 'cocinero' }, JWT_SECRET);

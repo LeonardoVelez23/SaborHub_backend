@@ -4,7 +4,7 @@ import { pagoService } from '../dependencias.js';
 
 export const getAllPagos = async (req, res, next) => {
   try {
-    res.status(200).json({ success: true, data: await pagoService.listar() });
+    res.status(200).json({ success: true, data: await pagoService.listar(req.user) });
   } catch (error) {
     next(error);
   }
@@ -49,7 +49,7 @@ export const createPago = async (req, res, next) => {
 
 export const updatePago = async (req, res, next) => {
   try {
-    const data = await pagoService.actualizar(req.params.id, req.body ?? {});
+    const data = await pagoService.actualizar(req.params.id, req.user, req.body ?? {});
     res.status(200).json({ success: true, message: 'Pago actualizado correctamente', data });
   } catch (error) {
     next(error);
@@ -58,7 +58,7 @@ export const updatePago = async (req, res, next) => {
 
 export const deletePago = async (req, res, next) => {
   try {
-    await pagoService.eliminar(req.params.id);
+    await pagoService.eliminar(req.params.id, req.user);
     res.status(200).json({ success: true, message: 'Pago eliminado correctamente' });
   } catch (error) {
     next(error);

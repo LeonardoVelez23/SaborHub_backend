@@ -16,6 +16,7 @@ import { crearTransaccionPagoRepository } from './repositories/transaccionPagoRe
 import { crearCuentaRepository } from './repositories/cuentaRepository.js';
 import { crearCredencialRepository } from './repositories/credencialRepository.js';
 import { crearCarritoRepository } from './repositories/carritoRepository.js';
+import { crearSucursalRepository } from './repositories/sucursalRepository.js';
 import { crearPedidoService } from './services/pedidoService.js';
 import { crearPagoService } from './services/pagoService.js';
 import { crearProductoService } from './services/productoService.js';
@@ -31,7 +32,7 @@ import { crearAuthService } from './services/authService.js';
 import { crearBiometricoService } from './services/biometricoService.js';
 import { crearCarritoService } from './services/carritoService.js';
 import { sendPasswordResetEmail } from './services/emailService.js';
-import { rolDeCargo } from './utils/roles.js';
+import { nivelDeCargo, rolDeCargo } from './utils/roles.js';
 import { emitirToken } from './utils/sesion.js';
 import { VERSION_LEGAL } from './legal/documentos.js';
 import { crearPagoTarjetaService } from './services/pagoTarjetaService.js';
@@ -60,7 +61,8 @@ const repositorios = {
   intentos: crearTransaccionPagoRepository(modelos),
   cuentas: crearCuentaRepository(modelos),
   credenciales: crearCredencialRepository(modelos),
-  carritos: crearCarritoRepository(modelos)
+  carritos: crearCarritoRepository(modelos),
+  sucursales: crearSucursalRepository(modelos)
 };
 
 const contrasenias = crearContrasenias(bcrypt);
@@ -111,7 +113,7 @@ export const perfilService = crearPerfilService(repositorios);
 
 export const privacidadService = crearPrivacidadService({ ...repositorios, contrasenias, transacciones });
 
-export const sesionService = crearSesionService({ cuentas: repositorios.cuentas, rolDeCargo });
+export const sesionService = crearSesionService({ cuentas: repositorios.cuentas, rolDeCargo, nivelDeCargo });
 
 export const authService = crearAuthService({
   cuentas: repositorios.cuentas,

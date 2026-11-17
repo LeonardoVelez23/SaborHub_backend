@@ -89,8 +89,8 @@ export const crearProducto = async (datos = {}) => {
 };
 
 /** Pedido creado directamente en BD, sin pasar por la API. */
-export const crearPedido = async (cliente, { estado = 'solicitado', empleado = null } = {}) => {
-  const producto = await crearProducto();
+export const crearPedido = async (cliente, { estado = 'solicitado', empleado = null, sucursal = null } = {}) => {
+  const producto = await crearProducto(sucursal ? { sucursal_id: sucursal.id } : {});
   const pedido = await Pedido.create({
     fecha: '2026-11-11',
     hora: '12:00',

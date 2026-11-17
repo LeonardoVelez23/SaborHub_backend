@@ -1,10 +1,14 @@
 import { sinDuplicados } from '../errors/RegistroDuplicado.js';
+import { filtroSucursal } from './alcance.js';
 
 /** Acceso a Categorias. `m` son los modelos (se leen al usarse). */
 export const crearCategoriaRepository = (m) => ({
-  listar: () => m.Categoria.findAll({ order: [['nombre', 'ASC']] }),
+  /** Públicas; con `sucursalId`, solo las de esa sucursal. */
+  listar: ({ sucursalId } = {}) =>
+    m.Categoria.findAll({ ...(sucursalId && { where: { sucursal_id: sucursalId } }), order: [['nombre', 'ASC']] }),
 
-  buscar: (id) => m.Categoria.findByPk(id),
+  /** Solo si está en el alcance (SIN_FILTRO para la consulta pública). */
+  buscar: (id, alcance) => m.Categoria.findOne({ where: { id, ...filtroSucursal(alcance) } }),
 
   crear: (datos) => sinDuplicados(() => m.Categoria.create(datos)),
 

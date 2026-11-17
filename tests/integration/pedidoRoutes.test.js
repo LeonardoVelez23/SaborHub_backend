@@ -3,6 +3,7 @@ import request from 'supertest';
 import app from '../../src/app.js';
 import { Pedido, Cliente, Empleado, Producto, DetallePedido, Pago } from '../../src/models/index.js';
 import jwt from 'jsonwebtoken';
+import { delegarFindOne } from './alcanceMock.js';
 
 // verifyToken consulta el rol vigente en la base; aquí los modelos son
 // simulados, así que se confía en el rol del token.
@@ -28,6 +29,7 @@ vi.mock('../../src/models/index.js', () => {
     Pedido: {
       findAll: vi.fn(),
       findByPk: vi.fn(),
+      findOne: vi.fn(),
       create: vi.fn(),
       count: vi.fn().mockResolvedValue(10)
     },
@@ -48,6 +50,8 @@ vi.mock('../../src/models/index.js', () => {
       ]),
       count: vi.fn().mockResolvedValue(5)
     },
+    Sucursal: { findOne: vi.fn(async () => ({ id: 1, restaurante_id: 1, activa: true, restaurante: { estado: 'activo' } })) },
+    Restaurante: { findByPk: vi.fn(async () => ({ id: 1 })) },
     Cliente: {
       findByPk: vi.fn(),
       findOne: vi.fn(),
@@ -75,6 +79,7 @@ describe('Pedido Routes (/api/v1/pedidos)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    delegarFindOne(Pedido);
     adminToken = jwt.sign({ id: 99, rol: 'admin' }, JWT_SECRET);
     meseroToken = jwt.sign({ id: 1, rol: 'mesero' }, JWT_SECRET);
     cocineroToken = jwt.sign({ id: 2, rol: 'cocinero' }, JWT_SECRET);

@@ -4,7 +4,7 @@ import { empleadoService } from '../dependencias.js';
 
 export const getAllEmpleados = async (req, res, next) => {
   try {
-    res.status(200).json({ success: true, data: await empleadoService.listar() });
+    res.status(200).json({ success: true, data: await empleadoService.listar(req.user) });
   } catch (error) {
     next(error);
   }
@@ -38,7 +38,7 @@ export const updateEmpleado = async (req, res, next) => {
 
 export const deleteEmpleado = async (req, res, next) => {
   try {
-    await empleadoService.eliminar(req.params.id);
+    await empleadoService.eliminar(req.params.id, req.user);
     res.status(200).json({ success: true, message: 'Empleado eliminado correctamente' });
   } catch (error) {
     next(error);

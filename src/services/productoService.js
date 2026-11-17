@@ -1,6 +1,7 @@
 import { ErrorNegocio } from '../errors/ErrorNegocio.js';
 import { RegistroDuplicado } from '../errors/RegistroDuplicado.js';
-import { sucursalDelPersonal } from './alcance.js';
+import { SIN_FILTRO, alcanceDe, sucursalParaEscribir } from './alcance.js';
+import { idOpcional } from './categoriaService.js';
 
 export const ESTADOS_PRODUCTO = ['disponible', 'no disponible'];
 
@@ -53,17 +54,17 @@ const unico = async (operacion) => {
 const noEncontrado = () => new ErrorNegocio('Producto no encontrado', 404);
 
 /** Productos del menú (RF-10 a RF-12). */
-export const crearProductoService = ({ productos, categorias }) => {
+export const crearProductoService = ({ productos, categorias, sucursales }) => {
   /** La categoría existe y es de la misma sucursal que el producto. */
   const categoriaDeSucursal = async (id, sucursalId) => {
-    const categoria = await categorias.buscar(id);
+    const categoria = await categorias.buscar(id, SIN_FILTRO);
     if (!categoria || categoria.sucursal_id !== sucursalId) {
       throw new ErrorNegocio('La categoría indicada no existe');
     }
   };
 
   return {
-    listar: () => productos.listar(),
+    listar: ({ sucursalId } = {}) => productos.listar({ sucursalId: idOpcional(sucursalId) }),
 
     obtener: async (id) => {
       const producto = await productos.buscarConCategoria(id);
@@ -71,14 +72,14 @@ export const crearProductoService = ({ productos, categorias }) => {
       return producto;
     },
 
-    /** En la sucursal de quien lo crea. */
+    /** En la sucursal de quien lo crea (o la indicada, si su alcance es mayor). */
     crear: async (usuario, datos) => {
       const { codigo, nombre, descripcion, precio, cantidad_disponible, estado, categoria_id } = datos;
       if (!codigo || !nombre || precio === undefined || !categoria_id) {
         throw new ErrorNegocio('Los campos codigo, nombre, precio y categoria_id son obligatorios');
       }
       const imagenCodigo = validarValores(datos);
-      const sucursalId = sucursalDelPersonal(usuario);
+      const sucursalId = (await sucursalParaEscribir(usuario, datos.sucursal_id, sucursales)).id;
       await categoriaDeSucursal(categoria_id, sucursalId);
 
       const producto = await unico(() =>
@@ -97,9 +98,9 @@ export const crearProductoService = ({ productos, categorias }) => {
       return productos.buscarConCategoria(producto.id);
     },
 
-    actualizar: async (id, datos) => {
+    actualizar: async (id, usuario, datos) => {
       const { codigo, nombre, descripcion, precio, cantidad_disponible, estado, categoria_id } = datos;
-      const producto = await productos.buscar(id);
+      const producto = await productos.buscar(id, alcanceDe(usuario));
       if (!producto) throw noEncontrado();
       const imagenCodigo = validarValores(datos);
       if (categoria_id) await categoriaDeSucursal(categoria_id, producto.sucursal_id);
@@ -119,8 +120,8 @@ export const crearProductoService = ({ productos, categorias }) => {
       return productos.buscarConCategoria(id);
     },
 
-    eliminar: async (id) => {
-      const producto = await productos.buscar(id);
+    eliminar: async (id, usuario) => {
+      const producto = await productos.buscar(id, alcanceDe(usuario));
       if (!producto) throw noEncontrado();
       await productos.eliminar(producto);
     }

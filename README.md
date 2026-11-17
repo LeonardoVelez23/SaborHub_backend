@@ -268,10 +268,10 @@ Ruta (permisos) → Controlador (HTTP) → Servicio (reglas de negocio) → Repo
 | **S** — Responsabilidad única | El **controlador** solo traduce HTTP (lee `req`, responde `res`). El **servicio** aplica las reglas (RN-01 a RN-19) y abre las transacciones. El **repositorio** es el único que usa Sequelize. Las reglas sin base de datos (transiciones, stock, totales, fechas) son funciones puras en `services/reglasPedido.js`. |
 | **O** — Abierto/cerrado | `services/pasarelas/pasarelaPago.js` define el contrato `PasarelaPago` (`nombre`, `configurada`, `preparar`, `confirmar`). Payphone (`pasarelas/payphone.js`) es una implementación; otra pasarela se agrega sin tocar `pagoTarjetaService`. |
 | **L** — Sustitución de Liskov | Cualquier pasarela o repositorio que cumpla el contrato es intercambiable: los tests de `tests/unit/pagoTarjetaService.test.js` usan una pasarela falsa y repositorios en memoria. |
-| **I** — Segregación de interfaces | Repositorios pequeños por entidad (`pedidoRepository`, `pagoRepository`, `productoRepository`, `categoriaRepository`, `clienteRepository`, `empleadoRepository`, `fotoPerfilRepository`, `privacidadRepository`, `personasRepository`, `transaccionPagoRepository`, `cuentaRepository`, `credencialRepository`, `carritoRepository`), no uno genérico. |
+| **I** — Segregación de interfaces | Repositorios pequeños por entidad (`pedidoRepository`, `pagoRepository`, `productoRepository`, `categoriaRepository`, `clienteRepository`, `empleadoRepository`, `fotoPerfilRepository`, `privacidadRepository`, `personasRepository`, `transaccionPagoRepository`, `cuentaRepository`, `credencialRepository`, `carritoRepository`, `sucursalRepository`), no uno genérico. |
 | **D** — Inversión de dependencias | Cada servicio se crea con sus dependencias (`crearPedidoService({pedidos, productos, pagos, personas, transacciones, reloj})`). Solo `src/dependencias.js` conoce las implementaciones reales. |
 
-En los tests de rutas con modelos simulados, la sesión se simula con `vi.mock('../../src/services/sesionService.js', () => ({ crearSesionService: () => ({ rolVigente: async ({ rol }) => rol }) }))`.
+En los tests de rutas con modelos simulados, la sesión se simula con `vi.mock('../../src/services/sesionService.js', () => ({ crearSesionService: () => ({ vigente: async ({ rol }) => ({ rol, restaurante_id: 1, sucursal_id: 1 }) }) }))`, y `tests/integration/alcanceMock.js` hace que `findOne({where: {id}})` responda lo de `findByPk`.
 
 Errores: un servicio lanza `ErrorNegocio(mensaje, status)` y el `errorHandler` responde `{success: false, message}` con ese código (también 502/503, cuyo mensaje sí se muestra). Un valor único repetido llega de los repositorios como `RegistroDuplicado` (nunca el error de Sequelize) y cada servicio lo convierte en su mensaje ("Ya existe un producto con ese código").
 
@@ -284,7 +284,15 @@ Módulo por módulo y **sin cambiar la API** (rutas, permisos y respuestas igual
 3. Clientes, empleados, perfil y privacidad. **Hecho.** Las reglas comunes de las cuentas (política de contraseña, OTP, quién edita qué perfil) están en `services/cuentas.js`; bcrypt y el OTP se inyectan (`services/contrasenias.js`).
 4. Inicio de sesión, recuperación con OTP, sesión vigente, ingreso biométrico y carrito. **Hecho.** Ningún controlador, servicio ni middleware importa los modelos ni Sequelize: solo `src/repositories/` y `src/dependencias.js`.
 
-Esta separación también prepara el soporte de **varios restaurantes**: el filtro por restaurante se aplica en los repositorios, en un solo lugar.
+### Restaurantes y sucursales (alcance del personal, RN-21)
+
+Cada empleado tiene `restaurante_id` y `sucursal_id`; el **nivel** sale del cargo (`utils/roles.js`): `superadmin` → plataforma, `admin_restaurante` → todas las sucursales de su restaurante (ambos con rol `admin`), cualquier otro → solo su sucursal. `verifyToken` lee rol, nivel, restaurante y sucursal de la base en cada petición (`sesionService.vigente`).
+
+- `services/alcance.js` convierte el usuario en un **alcance** (`alcanceDe`) y decide en qué sucursal escribe (`sucursalParaEscribir`: la suya, o la indicada en `sucursal_id` si su nivel es mayor y está en su alcance).
+- `repositories/alcance.js` convierte el alcance en el `where` de Sequelize (`filtroSucursal`, `filtroDeSucursales`, `filtroEmpleados`). Es el **único** lugar que filtra; una consulta sin alcance lanza error. Lo público (menú) y lo del propio cliente pasan `SIN_FILTRO` a propósito.
+- Fuera del alcance todo responde **404**, como si no existiera (CA-32, CA-33). Un empleado sin sucursal no ve nada.
+- Nadie asigna un cargo con más alcance que el suyo (RN-24). Una sucursal inactiva o un restaurante suspendido no reciben pedidos (RN-22).
+- Tests: `tests/aislamiento.test.js` (restaurante X con sucursales A y B, restaurante Y con C) y `tests/sucursales.test.js`.
 
 ### Reglas para el código nuevo
 

@@ -1,5 +1,6 @@
 import { ErrorNegocio } from '../errors/ErrorNegocio.js';
 import { RegistroDuplicado } from '../errors/RegistroDuplicado.js';
+import { SIN_FILTRO, alcanceDe } from './alcance.js';
 
 export const METODOS_PAGO = ['efectivo', 'tarjeta', 'transferencia'];
 
@@ -34,13 +35,16 @@ const sinPermiso = () => new ErrorNegocio('No tiene permisos para ver este pago'
  * Pagos registrados en caja o por el personal (RF-21, RF-23 a RF-25,
  * RN-09 a RN-12). El pago con tarjeta en línea está en pagoTarjetaService.
  */
+/** El cliente ve lo suyo (se comprueba el dueño); el personal, su alcance (RN-21). */
+const alcanceDel = (usuario) => (usuario.rol === 'cliente' ? SIN_FILTRO : alcanceDe(usuario));
+
 export const crearPagoService = ({ pagos, pedidos }) => ({
-  listar: () => pagos.listar(),
+  listar: (usuario) => pagos.listar(alcanceDe(usuario)),
 
   misPagos: (clienteId) => pagos.listarDeCliente(clienteId),
 
   obtener: async (id, usuario) => {
-    const pago = await pagos.buscarDetallado(id);
+    const pago = await pagos.buscarDetallado(id, alcanceDel(usuario));
     if (!pago) throw new ErrorNegocio('Pago no encontrado', 404);
     if (usuario.rol === 'cliente' && pago.pedido?.cliente_id !== usuario.id) throw sinPermiso();
     return pago;
@@ -48,10 +52,10 @@ export const crearPagoService = ({ pagos, pedidos }) => ({
 
   delPedido: async (pedidoId, usuario) => {
     if (usuario.rol === 'cliente') {
-      const pedido = await pedidos.buscar(pedidoId, { atributos: ['id', 'cliente_id'] });
+      const pedido = await pedidos.buscar(pedidoId, SIN_FILTRO, { atributos: ['id', 'cliente_id'] });
       if (pedido && pedido.cliente_id !== usuario.id) throw sinPermiso();
     }
-    const pago = await pagos.delPedido(pedidoId);
+    const pago = await pagos.delPedido(pedidoId, alcanceDel(usuario));
     if (!pago) throw new ErrorNegocio('No se encontró pago para este pedido', 404);
     return pago;
   },
@@ -72,7 +76,7 @@ export const crearPagoService = ({ pagos, pedidos }) => ({
     const estadoFinal = esCliente ? 'pendiente' : estado || 'pendiente';
     validarEstado(estadoFinal);
 
-    const pedido = await pedidos.buscar(pedido_id);
+    const pedido = await pedidos.buscar(pedido_id, alcanceDel(usuario));
     if (!pedido) throw new ErrorNegocio('El pedido indicado no existe');
     if (esCliente && pedido.cliente_id !== usuario.id) {
       throw new ErrorNegocio('No tiene permisos para pagar este pedido', 403);
@@ -107,8 +111,8 @@ export const crearPagoService = ({ pagos, pedidos }) => ({
   },
 
   /** RN-12: no se aprueba el pago de un pedido cancelado. */
-  actualizar: async (id, { fecha, valor, metodo_pago, numero_referencia, estado }) => {
-    const pago = await pagos.buscarConPedido(id);
+  actualizar: async (id, usuario, { fecha, valor, metodo_pago, numero_referencia, estado }) => {
+    const pago = await pagos.buscarConPedido(id, alcanceDe(usuario));
     if (!pago) throw new ErrorNegocio('Pago no encontrado', 404);
 
     if (pago.pedido?.estado === 'cancelado' && estado === 'aprobado') {
@@ -137,8 +141,8 @@ export const crearPagoService = ({ pagos, pedidos }) => ({
     return pagos.buscarConResumen(id);
   },
 
-  eliminar: async (id) => {
-    const pago = await pagos.buscar(id);
+  eliminar: async (id, usuario) => {
+    const pago = await pagos.buscar(id, alcanceDe(usuario));
     if (!pago) throw new ErrorNegocio('Pago no encontrado', 404);
     await pagos.eliminar(pago);
   }

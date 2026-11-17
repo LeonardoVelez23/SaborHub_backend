@@ -54,7 +54,7 @@ export const updatePedido = async (req, res, next) => {
 
 export const deletePedido = async (req, res, next) => {
   try {
-    await pedidoService.eliminar(req.params.id);
+    await pedidoService.eliminar(req.params.id, req.user);
     res.status(200).json({ success: true, message: 'Pedido eliminado correctamente' });
   } catch (error) {
     next(error);
@@ -64,7 +64,7 @@ export const deletePedido = async (req, res, next) => {
 export const getPedidoStats = async (req, res, next) => {
   try {
     const { desde, hasta } = req.query;
-    const data = await pedidoService.estadisticas({ desde, hasta });
+    const data = await pedidoService.estadisticas(req.user, { desde, hasta });
     res.status(200).json({ success: true, data });
   } catch (error) {
     next(error);

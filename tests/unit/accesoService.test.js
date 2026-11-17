@@ -76,10 +76,10 @@ describe('Sesión vigente', () => {
       },
       rolDeCargo: (c) => c.toLowerCase()
     });
-    expect(await sesion.vigente({ id: 1, rol: 'cliente' })).toEqual({ rol: 'cliente', restaurante_id: null, sucursal_id: null });
+    expect(await sesion.vigente({ id: 1, rol: 'cliente' })).toEqual({ rol: 'cliente', nivel: null, restaurante_id: null, sucursal_id: null });
     expect(await sesion.vigente({ id: 2, rol: 'cliente' })).toBeNull();
     // Rol y alcance de la base, no del token.
-    expect(await sesion.vigente({ id: 7, rol: 'admin' })).toEqual({ rol: 'cajero', restaurante_id: 4, sucursal_id: 9 });
+    expect(await sesion.vigente({ id: 7, rol: 'admin' })).toEqual({ rol: 'cajero', nivel: 'sucursal', restaurante_id: 4, sucursal_id: 9 });
     expect(await sesion.vigente({ id: 8, rol: 'admin' })).toBeNull();
   });
 });
@@ -144,5 +144,29 @@ describe('Carrito (RF-13)', () => {
       { cliente_id: 1, producto_id: 3, cantidad: 2, posicion: 0 },
       { cliente_id: 1, producto_id: 1, cantidad: 5, posicion: 1 }
     ]);
+  });
+});
+
+describe('Cargos y alcance (DERCAS 12, RN-21)', () => {
+  it('superadmin y admin de restaurante son admin con más alcance; sin sucursal no se ve nada', async () => {
+    const { rolDeCargo, nivelDeCargo } = await import('../../src/utils/roles.js');
+    const { alcanceDe } = await import('../../src/services/alcance.js');
+    expect(rolDeCargo('superadmin')).toBe('admin');
+    expect(rolDeCargo('admin_restaurante')).toBe('admin');
+    expect(nivelDeCargo('superadmin')).toBe('plataforma');
+    expect(nivelDeCargo('admin_restaurante')).toBe('restaurante');
+    expect(nivelDeCargo('Administrador')).toBe('sucursal');
+    expect(alcanceDe({ nivel: 'sucursal', sucursal_id: 3 })).toEqual({ nivel: 'sucursal', sucursalId: 3 });
+    expect(alcanceDe({ nivel: 'restaurante', restaurante_id: 2 })).toEqual({ nivel: 'restaurante', restauranteId: 2 });
+    expect(alcanceDe({ nivel: 'plataforma' })).toEqual({ nivel: 'plataforma' });
+    // Un cajero sin sucursal no ve más: no ve nada.
+    expect(alcanceDe({ nivel: 'sucursal', sucursal_id: null })).toEqual({ nivel: 'ninguno' });
+  });
+
+  it('el filtro de los repositorios exige un alcance', async () => {
+    const { filtroSucursal } = await import('../../src/repositories/alcance.js');
+    expect(() => filtroSucursal(undefined)).toThrow('sin alcance');
+    expect(filtroSucursal({ nivel: 'sucursal', sucursalId: 4 })).toEqual({ sucursal_id: 4 });
+    expect(() => filtroSucursal({ nivel: 'sucursal', sucursalId: '1 OR 1=1' })).toThrow('inválido');
   });
 });

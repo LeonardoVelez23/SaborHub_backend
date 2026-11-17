@@ -60,6 +60,17 @@ const cuerpo = (schema, requerido = true) => ({
 const PERSONAL = ['admin', 'empleado', 'cajero', 'cocinero', 'mesero'];
 const CAJA = ['admin', 'empleado', 'cajero'];
 
+const SUCURSAL_QUERY = {
+  name: 'sucursal_id',
+  in: 'query',
+  description: 'Solo los de esa sucursal (menú de la sucursal elegida). Sin él, todos.',
+  schema: { type: 'integer', minimum: 1 }
+};
+const SUCURSAL_DESTINO = {
+  type: 'integer',
+  description: 'Solo para admin_restaurante y superadmin (obligatorio para ellos): sucursal donde se crea. El resto del personal usa la suya y este campo se ignora.'
+};
+
 const pagina = (descripcion) => ({
   servers: [{ url: '/' }],
   responses: { 200: { description: descripcion, content: { 'text/html': {} } } }
@@ -78,6 +89,9 @@ export const openapi = {
       '',
       '**Autenticación**: cabecera `Authorization: Bearer <JWT>`. El rol se vuelve a leer de la base en cada petición.',
       'JWT del cliente: 20 minutos fijos desde el login; del personal: 8 horas. Sin renovación.',
+      '',
+      '**Alcance del personal (RN-21)**: cada empleado ve y modifica solo lo de su sucursal; el cargo `admin_restaurante`, todas las sucursales de su restaurante; `superadmin`, toda la plataforma (ambos tienen el rol admin).',
+      'El alcance sale de la base, nunca de la petición. Un pedido, pago, producto, categoría o empleado fuera del alcance responde 404, como si no existiera.',
       '',
       '**Importes**: números con 2 decimales (`precio`, `valor_total`, `subtotal`, `valor`). Moneda USD.',
       '**Fechas**: `fecha` y `hora` del pedido en zona America/Guayaquil (`AAAA-MM-DD`, `HH:mm:ss`); el resto en ISO 8601 UTC.',
@@ -181,7 +195,8 @@ export const openapi = {
           telefono: { type: ['string', 'null'] },
           cargo: {
             type: ['string', 'null'],
-            description: 'admin|administrador → admin; cajero, cocinero, mesero → ese rol; otro → empleado.'
+            description:
+              'admin|administrador → admin (de su sucursal); admin_restaurante → admin de todo su restaurante; superadmin → admin de la plataforma; cajero, cocinero, mesero → ese rol; otro → empleado.'
           },
           turno_trabajo: { type: ['string', 'null'], maxLength: 50 },
           restaurante_id: { type: ['integer', 'null'], description: 'null solo para el superadmin de la plataforma.' },
@@ -445,14 +460,23 @@ export const openapi = {
 
     // ------------------------------------------------------------ Catálogo
     '/categorias': {
-      get: { tags: ['Catálogo'], summary: 'Categorías ordenadas por nombre', responses: ok('Lista', lista(ref('Categoria'))) },
+      get: {
+        tags: ['Catálogo'],
+        summary: 'Categorías ordenadas por nombre',
+        parameters: [SUCURSAL_QUERY],
+        responses: { ...ok('Lista', lista(ref('Categoria'))), ...E400 }
+      },
       post: {
         tags: ['Catálogo'],
         summary: 'Crear categoría (RF-09)',
         description: 'Se crea en la sucursal del usuario de la sesión (403 si no tiene sucursal).',
         'x-reglas': ['RN-17', 'RN-21'],
         ...protegido(CAJA),
-        ...cuerpo({ type: 'object', required: ['nombre'], properties: { nombre: { type: 'string' } } }),
+        ...cuerpo({
+          type: 'object',
+          required: ['nombre'],
+          properties: { nombre: { type: 'string' }, sucursal_id: SUCURSAL_DESTINO }
+        }),
         responses: { ...ok('Creada', ref('Categoria'), '201'), ...E400, ...E401, ...E403 }
       }
     },
@@ -478,7 +502,8 @@ export const openapi = {
         tags: ['Catálogo'],
         summary: 'Productos con su categoría, ordenados por nombre (RF-12)',
         description: 'Incluye los no disponibles y sin stock: la app los muestra deshabilitados.',
-        responses: ok('Lista', lista(ref('Producto')))
+        parameters: [SUCURSAL_QUERY],
+        responses: { ...ok('Lista', lista(ref('Producto'))), ...E400 }
       },
       post: {
         tags: ['Catálogo'],
@@ -486,7 +511,12 @@ export const openapi = {
         description: 'Se crea en la sucursal del usuario de la sesión (403 si no tiene); la categoría debe ser de esa sucursal.',
         'x-reglas': ['RN-17', 'RN-21'],
         ...protegido(CAJA),
-        ...cuerpo({ allOf: [ref('ProductoEntrada'), { required: ['codigo', 'nombre', 'precio', 'categoria_id'] }] }),
+        ...cuerpo({
+          allOf: [
+            ref('ProductoEntrada'),
+            { required: ['codigo', 'nombre', 'precio', 'categoria_id'], properties: { sucursal_id: SUCURSAL_DESTINO } }
+          ]
+        }),
         responses: { ...ok('Creado', ref('Producto'), '201'), ...E400, ...E401, ...E403 }
       }
     },
@@ -582,14 +612,16 @@ export const openapi = {
     '/empleados': {
       get: {
         tags: ['Usuarios'],
-        summary: 'Empleados (RF-07)',
+        summary: 'Empleados de su alcance (RF-07, RF-40)',
         ...protegido(['admin']),
         responses: { ...ok('Lista', lista(ref('Empleado'))), ...E401, ...E403 }
       },
       post: {
         tags: ['Usuarios'],
         summary: 'Crear empleado',
-        description: 'Queda en el restaurante y la sucursal del administrador que lo crea.',
+        description:
+          'Queda en la sucursal del administrador que lo crea; admin_restaurante y superadmin indican sucursal_id (o restaurante_id para un admin_restaurante). Nadie asigna un cargo con más alcance que el suyo (403, RN-24).',
+        'x-reglas': ['RN-18', 'RN-21', 'RN-24'],
         ...protegido(['admin']),
         ...cuerpo({
           type: 'object',
@@ -602,7 +634,9 @@ export const openapi = {
             telefono: { type: ['string', 'null'] },
             cargo: { type: ['string', 'null'] },
             turno_trabajo: { type: ['string', 'null'] },
-            contrasenia: ref('Contrasenia')
+            contrasenia: ref('Contrasenia'),
+            sucursal_id: SUCURSAL_DESTINO,
+            restaurante_id: { type: 'integer', description: 'Solo el superadmin, al crear un admin_restaurante.' }
           }
         }),
         responses: { ...ok('Creado', ref('Empleado'), '201'), ...E400, ...E401, ...E403 }
@@ -638,7 +672,7 @@ export const openapi = {
       get: {
         tags: ['Pedidos'],
         summary: 'Pedidos, del más reciente al más antiguo (RF-16)',
-        description: 'Un cliente recibe solo los suyos. El personal puede filtrar por cliente.',
+        description: 'Un cliente recibe solo los suyos. El personal, los de su alcance (RN-21), y puede filtrar por cliente.',
         ...protegido(['cliente', ...PERSONAL]),
         parameters: [{ name: 'cliente_id', in: 'query', schema: { type: 'integer', minimum: 1 } }],
         responses: { ...ok('Lista', lista(ref('Pedido'))), ...E400, ...E401, ...E403 }
@@ -651,9 +685,10 @@ export const openapi = {
           'valida existencia, disponibilidad y stock, descuenta el stock, calcula precio_unitario (precio vigente), subtotal y total (redondeo a 2 decimales).',
           'Estado inicial "solicitado"; fecha y hora del servidor. Si lo crea un cliente: cliente_id = el del token, sin empleados, y se vacía su carrito.',
           'Si lo crea el personal: cliente_id obligatorio y empleado_id / empleado_preparacion_id opcionales.',
-          'El pedido es de la sucursal de sus productos; todos deben ser de la misma sucursal (400 si no).'
+          'El pedido es de la sucursal de sus productos; todos deben ser de la misma sucursal (400 si no).',
+          'La sucursal debe estar activa y su restaurante activo (400 "Esta sucursal no está recibiendo pedidos por ahora"); el personal solo registra pedidos de su alcance.'
         ].join(' '),
-        'x-reglas': ['RN-06', 'RN-07', 'RN-08', 'RN-19', 'RN-20'],
+        'x-reglas': ['RN-06', 'RN-07', 'RN-08', 'RN-19', 'RN-20', 'RN-21', 'RN-22'],
         ...protegido(['cliente', 'admin', 'empleado', 'cajero', 'mesero']),
         ...cuerpo({
           type: 'object',
@@ -681,8 +716,9 @@ export const openapi = {
     '/pedidos/stats': {
       get: {
         tags: ['Reportes'],
-        summary: 'Estadísticas del dashboard (RF-29 a RF-33)',
-        'x-reglas': ['RN-13'],
+        summary: 'Estadísticas del dashboard (RF-29 a RF-33, RF-41)',
+        description: 'Solo del alcance de quien las pide: su sucursal, su restaurante o la plataforma.',
+        'x-reglas': ['RN-13', 'RN-21'],
         ...protegido(CAJA),
         parameters: [
           { name: 'desde', in: 'query', schema: { type: 'string', format: 'date' } },
@@ -694,7 +730,10 @@ export const openapi = {
             properties: {
               totalOrders: { type: 'integer', description: 'Pedidos del periodo (todos los estados)' },
               totalRevenue: { type: 'number', description: 'Suma de pagos aprobados de pedidos del periodo' },
-              totalClients: { type: 'integer', description: 'Clientes registrados (sin filtro de fecha)' },
+              totalClients: {
+                type: 'integer',
+                description: 'Sin filtro de fecha: clientes registrados (superadmin) o clientes que pidieron en su alcance (resto)'
+              },
               orderStatusDistribution: { type: 'object', description: 'Cuenta por estado; los 6 estados siempre presentes' },
               modalityDistribution: { type: 'object', description: '{presencial, "en línea", desconocida}' },
               popularProducts: lista({
@@ -762,7 +801,7 @@ export const openapi = {
     '/pagos': {
       get: {
         tags: ['Pagos'],
-        summary: 'Pagos con su pedido y cliente, por fecha descendente (RF-24)',
+        summary: 'Pagos de su alcance con su pedido y cliente, por fecha descendente (RF-24)',
         ...protegido(CAJA),
         responses: { ...ok('Lista', lista(ref('Pago'))), ...E401, ...E403 }
       },

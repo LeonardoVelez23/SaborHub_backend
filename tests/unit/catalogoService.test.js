@@ -3,6 +3,24 @@ import { RegistroDuplicado } from '../../src/errors/RegistroDuplicado.js';
 import { crearCategoriaService } from '../../src/services/categoriaService.js';
 import { crearProductoService, leerImagenCodigo } from '../../src/services/productoService.js';
 
+/** Sucursales 1 y 2 del restaurante 1; la 3, del restaurante 2. */
+const SUCURSALES = [
+  { id: 1, restaurante_id: 1 },
+  { id: 2, restaurante_id: 1 },
+  { id: 3, restaurante_id: 2 }
+];
+const enAlcance = (sucursalId, alcance) => {
+  if (!alcance || alcance.nivel === 'plataforma') return true;
+  if (alcance.nivel === 'sucursal') return sucursalId === alcance.sucursalId;
+  if (alcance.nivel === 'restaurante') {
+    return SUCURSALES.find((s) => s.id === sucursalId)?.restaurante_id === alcance.restauranteId;
+  }
+  return false;
+};
+const sucursales = {
+  buscar: async (id, alcance) => SUCURSALES.find((s) => s.id === Number(id) && enAlcance(s.id, alcance)) ?? null
+};
+
 /** Repositorio en memoria con un campo único, como la base. */
 const enMemoria = (campoUnico, filas = []) => {
   let siguiente = filas.length + 1;
@@ -11,7 +29,9 @@ const enMemoria = (campoUnico, filas = []) => {
   const repo = {
     filas,
     listar: async () => filas,
-    buscar: async (id) => filas.find((f) => f.id === Number(id)) ?? null,
+    // Respeta el alcance como el repositorio real (nivel sucursal o restaurante).
+    buscar: async (id, alcance) =>
+      filas.find((f) => f.id === Number(id) && enAlcance(f.sucursal_id, alcance)) ?? null,
     crear: async (datos) => {
       if (duplicado(datos)) throw new RegistroDuplicado();
       const fila = { id: siguiente++, ...datos };
@@ -34,8 +54,8 @@ const armar = () => {
   return {
     categorias,
     productos,
-    categoriaService: crearCategoriaService({ categorias }),
-    productoService: crearProductoService({ productos, categorias })
+    categoriaService: crearCategoriaService({ categorias, sucursales }),
+    productoService: crearProductoService({ productos, categorias, sucursales })
   };
 };
 
@@ -70,16 +90,16 @@ describe('Catálogo (RF-09 a RF-11, RN-17) sin base de datos', () => {
       expect(() => leerImagenCodigo(malo)).toThrow('imagen_codigo');
     }
     const { productoService, productos } = armar();
-    await productoService.actualizar(1, { imagen_codigo: 'cafe' });
-    await productoService.actualizar(1, { precio: 2 });
+    await productoService.actualizar(1, CAJERO, { imagen_codigo: 'cafe' });
+    await productoService.actualizar(1, CAJERO, { precio: 2 });
     expect(productos.filas[0]).toMatchObject({ imagen_codigo: 'cafe', precio: 2 });
-    await productoService.actualizar(1, { imagen_codigo: null });
+    await productoService.actualizar(1, CAJERO, { imagen_codigo: null });
     expect(productos.filas[0].imagen_codigo).toBeNull();
   });
 
   it('responde 404 si el producto no existe antes de validar los datos', async () => {
     const { productoService } = armar();
-    await expect(productoService.actualizar(9, { precio: 0 })).rejects.toMatchObject({ status: 404 });
+    await expect(productoService.actualizar(9, CAJERO, { precio: 0 })).rejects.toMatchObject({ status: 404 });
   });
 
   it('las categorías tienen nombre obligatorio y único', async () => {
@@ -87,6 +107,28 @@ describe('Catálogo (RF-09 a RF-11, RN-17) sin base de datos', () => {
     await expect(categoriaService.crear(CAJERO, { nombre: '  ' })).rejects.toThrow('obligatorio');
     await expect(categoriaService.crear(CAJERO, { nombre: 'Bebidas' })).rejects.toThrow('Ya existe una categoría con ese nombre');
     expect(await categoriaService.crear(CAJERO, { nombre: ' Postres ' })).toMatchObject({ nombre: 'Postres', sucursal_id: 1 });
-    await expect(categoriaService.eliminar(9)).rejects.toMatchObject({ status: 404 });
+    await expect(categoriaService.eliminar(9, CAJERO)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('el personal solo modifica lo de su sucursal; el admin de restaurante elige una de las suyas (RN-21, RN-24)', async () => {
+    const { productoService, categoriaService, categorias } = armar();
+    categorias.filas.push({ id: 3, nombre: 'Lejana', sucursal_id: 3 });
+    // La categoría 2 es de la sucursal 2: para el cajero de la 1, no existe.
+    await expect(categoriaService.actualizar(2, CAJERO, { nombre: 'X' })).rejects.toMatchObject({ status: 404 });
+    await expect(categoriaService.eliminar(2, CAJERO)).rejects.toMatchObject({ status: 404 });
+
+    const ADMIN_R1 = { id: 20, rol: 'admin', nivel: 'restaurante', restaurante_id: 1, sucursal_id: null };
+    await expect(categoriaService.crear(ADMIN_R1, { nombre: 'Snacks' })).rejects.toThrow('sucursal_id es obligatorio');
+    expect(await categoriaService.crear(ADMIN_R1, { nombre: 'Snacks', sucursal_id: 2 })).toMatchObject({ sucursal_id: 2 });
+    // Sucursal de otro restaurante: no existe para él.
+    await expect(categoriaService.crear(ADMIN_R1, { nombre: 'Snacks', sucursal_id: 3 })).rejects.toThrow('no existe');
+    const p = await productoService.crear(ADMIN_R1, { codigo: 'P9', nombre: 'Jugo', precio: 2, categoria_id: 2, sucursal_id: 2 });
+    expect(p.sucursal_id).toBe(2);
+    await expect(productoService.actualizar(p.id, CAJERO, { precio: 3 })).rejects.toMatchObject({ status: 404 });
+    expect(await productoService.actualizar(p.id, ADMIN_R1, { precio: 3 })).toMatchObject({ precio: 3 });
+    // La categoría debe ser de la sucursal del producto.
+    await expect(
+      productoService.crear(ADMIN_R1, { codigo: 'P10', nombre: 'Agua', precio: 1, categoria_id: 1, sucursal_id: 2 })
+    ).rejects.toThrow('categoría indicada no existe');
   });
 });
