@@ -4,12 +4,12 @@ import app from '../../src/app.js';
 import { Cliente, Empleado } from '../../src/models/index.js';
 import * as emailService from '../../src/services/emailService.js';
 import bcrypt from 'bcryptjs';
-import { emitirOtp } from '../../src/services/otpService.js';
+import { otpService } from '../../src/dependencias.js';
 
 // verifyToken consulta el rol vigente en la base; aquí los modelos son
 // simulados, así que se confía en el rol del token.
 vi.mock('../../src/services/sesionService.js', () => ({
-  rolVigente: vi.fn(async ({ rol }) => rol)
+  crearSesionService: () => ({ rolVigente: async ({ rol }) => rol })
 }));
 
 vi.mock('../../src/models/index.js', () => {
@@ -238,7 +238,7 @@ describe('Auth Routes (/api/v1/auth)', () => {
         update: vi.fn(async (datos) => Object.assign(mockUser, datos)),
         increment: vi.fn()
       };
-      const otp = await emitirOtp(mockUser);
+      const otp = await otpService.emitir(mockUser);
 
       Cliente.findOne.mockImplementation(async () => mockUser);
       Empleado.findOne.mockImplementation(async () => null);

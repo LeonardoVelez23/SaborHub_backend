@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { config } from '../config/env.js';
-import { rolVigente } from '../services/sesionService.js';
+import { sesionService } from '../dependencias.js';
 
 const noAutorizado = (res, message) => res.status(401).json({ success: false, message });
 
@@ -23,7 +23,7 @@ export const verifyToken = async (req, res, next) => {
   }
 
   try {
-    const rol = await rolVigente(decoded);
+    const rol = await sesionService.rolVigente(decoded);
     if (!rol) {
       return noAutorizado(res, 'La sesión ya no es válida. Inicia sesión de nuevo.');
     }

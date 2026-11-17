@@ -13,6 +13,9 @@ import { crearPrivacidadRepository } from './repositories/privacidadRepository.j
 import { crearPagoRepository } from './repositories/pagoRepository.js';
 import { crearPersonasRepository } from './repositories/personasRepository.js';
 import { crearTransaccionPagoRepository } from './repositories/transaccionPagoRepository.js';
+import { crearCuentaRepository } from './repositories/cuentaRepository.js';
+import { crearCredencialRepository } from './repositories/credencialRepository.js';
+import { crearCarritoRepository } from './repositories/carritoRepository.js';
 import { crearPedidoService } from './services/pedidoService.js';
 import { crearPagoService } from './services/pagoService.js';
 import { crearProductoService } from './services/productoService.js';
@@ -22,7 +25,14 @@ import { crearEmpleadoService } from './services/empleadoService.js';
 import { crearPerfilService } from './services/perfilService.js';
 import { crearPrivacidadService } from './services/privacidadService.js';
 import { crearContrasenias } from './services/contrasenias.js';
-import { otpLimpio, verificarOtp } from './services/otpService.js';
+import { crearOtpService } from './services/otpService.js';
+import { crearSesionService } from './services/sesionService.js';
+import { crearAuthService } from './services/authService.js';
+import { crearBiometricoService } from './services/biometricoService.js';
+import { crearCarritoService } from './services/carritoService.js';
+import { sendPasswordResetEmail } from './services/emailService.js';
+import { rolDeCargo } from './utils/roles.js';
+import { emitirToken } from './utils/sesion.js';
 import { VERSION_LEGAL } from './legal/documentos.js';
 import { crearPagoTarjetaService } from './services/pagoTarjetaService.js';
 import { crearPasarelaPayphone } from './services/pasarelas/payphone.js';
@@ -47,11 +57,16 @@ const repositorios = {
   privacidad: crearPrivacidadRepository(modelos),
   pagos: crearPagoRepository(modelos),
   personas: crearPersonasRepository(modelos),
-  intentos: crearTransaccionPagoRepository(modelos)
+  intentos: crearTransaccionPagoRepository(modelos),
+  cuentas: crearCuentaRepository(modelos),
+  credenciales: crearCredencialRepository(modelos),
+  carritos: crearCarritoRepository(modelos)
 };
 
 const contrasenias = crearContrasenias(bcrypt);
-const otps = { verificar: verificarOtp, limpio: otpLimpio };
+
+export const otpService = crearOtpService({ cuentas: repositorios.cuentas, secreto: config.jwtSecret });
+const otps = otpService;
 
 /** Cambiar de pasarela = cambiar esta línea (contrato en pasarelas/pasarelaPago.js). */
 const pasarela = crearPasarelaPayphone(config.payphone);
@@ -95,3 +110,23 @@ export const empleadoService = crearEmpleadoService({ ...repositorios, otps, con
 export const perfilService = crearPerfilService(repositorios);
 
 export const privacidadService = crearPrivacidadService({ ...repositorios, contrasenias, transacciones });
+
+export const sesionService = crearSesionService({ cuentas: repositorios.cuentas, rolDeCargo });
+
+export const authService = crearAuthService({
+  cuentas: repositorios.cuentas,
+  otps,
+  contrasenias,
+  emitirToken,
+  rolDeCargo,
+  correo: { enviarCodigo: (...datos) => sendPasswordResetEmail(...datos) },
+  // En desarrollo el código se ve en la consola (sin correo configurado).
+  mostrarCodigo:
+    config.nodeEnv === 'development'
+      ? (correo, otp) => console.log(`\n🔑 [CÓDIGO OTP ENVIADO A ${correo}]: ${otp}\n`)
+      : null
+});
+
+export const biometricoService = crearBiometricoService({ ...repositorios, emitirToken });
+
+export const carritoService = crearCarritoService({ ...repositorios, transacciones });

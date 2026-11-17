@@ -5,7 +5,7 @@ import app from '../../src/app.js';
 // verifyToken consulta el rol vigente en la base; aquí los modelos son
 // simulados, así que se confía en el rol del token.
 vi.mock('../../src/services/sesionService.js', () => ({
-  rolVigente: vi.fn(async ({ rol }) => rol)
+  crearSesionService: () => ({ rolVigente: async ({ rol }) => rol })
 }));
 
 vi.mock('../../src/models/index.js', () => ({
