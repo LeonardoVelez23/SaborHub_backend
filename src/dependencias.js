@@ -1,10 +1,15 @@
 import { randomBytes } from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import { config } from './config/env.js';
 import * as modelos from './models/index.js';
 import { crearTransacciones } from './repositories/transacciones.js';
 import { crearPedidoRepository } from './repositories/pedidoRepository.js';
 import { crearProductoRepository } from './repositories/productoRepository.js';
 import { crearCategoriaRepository } from './repositories/categoriaRepository.js';
+import { crearClienteRepository } from './repositories/clienteRepository.js';
+import { crearEmpleadoRepository } from './repositories/empleadoRepository.js';
+import { crearFotoPerfilRepository } from './repositories/fotoPerfilRepository.js';
+import { crearPrivacidadRepository } from './repositories/privacidadRepository.js';
 import { crearPagoRepository } from './repositories/pagoRepository.js';
 import { crearPersonasRepository } from './repositories/personasRepository.js';
 import { crearTransaccionPagoRepository } from './repositories/transaccionPagoRepository.js';
@@ -12,6 +17,13 @@ import { crearPedidoService } from './services/pedidoService.js';
 import { crearPagoService } from './services/pagoService.js';
 import { crearProductoService } from './services/productoService.js';
 import { crearCategoriaService } from './services/categoriaService.js';
+import { crearClienteService } from './services/clienteService.js';
+import { crearEmpleadoService } from './services/empleadoService.js';
+import { crearPerfilService } from './services/perfilService.js';
+import { crearPrivacidadService } from './services/privacidadService.js';
+import { crearContrasenias } from './services/contrasenias.js';
+import { otpLimpio, verificarOtp } from './services/otpService.js';
+import { VERSION_LEGAL } from './legal/documentos.js';
 import { crearPagoTarjetaService } from './services/pagoTarjetaService.js';
 import { crearPasarelaPayphone } from './services/pasarelas/payphone.js';
 import { ahoraLocal } from './utils/reloj.js';
@@ -29,10 +41,17 @@ const repositorios = {
   pedidos: crearPedidoRepository(modelos),
   productos: crearProductoRepository(modelos),
   categorias: crearCategoriaRepository(modelos),
+  clientes: crearClienteRepository(modelos),
+  empleados: crearEmpleadoRepository(modelos),
+  fotos: crearFotoPerfilRepository(modelos),
+  privacidad: crearPrivacidadRepository(modelos),
   pagos: crearPagoRepository(modelos),
   personas: crearPersonasRepository(modelos),
   intentos: crearTransaccionPagoRepository(modelos)
 };
+
+const contrasenias = crearContrasenias(bcrypt);
+const otps = { verificar: verificarOtp, limpio: otpLimpio };
 
 /** Cambiar de pasarela = cambiar esta línea (contrato en pasarelas/pasarelaPago.js). */
 const pasarela = crearPasarelaPayphone(config.payphone);
@@ -63,3 +82,16 @@ export const pagoTarjetaService = crearPagoTarjetaService({
   },
   generarReferencia: (pedidoId) => `SP${pedidoId}-${randomBytes(6).toString('hex')}`
 });
+
+export const clienteService = crearClienteService({
+  ...repositorios,
+  otps,
+  contrasenias,
+  versionLegal: VERSION_LEGAL
+});
+
+export const empleadoService = crearEmpleadoService({ ...repositorios, otps, contrasenias });
+
+export const perfilService = crearPerfilService(repositorios);
+
+export const privacidadService = crearPrivacidadService({ ...repositorios, contrasenias, transacciones });
