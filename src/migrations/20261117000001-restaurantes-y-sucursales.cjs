@@ -83,7 +83,11 @@ module.exports = {
           replacements: { id: sucursal.id },
           transaction: t
         });
-        await queryInterface.changeColumn(tabla, 'sucursal_id', { ...referencia('Sucursales'), allowNull: false }, { transaction: t });
+        // SET NOT NULL directo: changeColumn con `references` vuelve a crear la
+        // clave foránea y quedaba duplicada (`*_sucursal_id_fkey1`).
+        await queryInterface.sequelize.query(`ALTER TABLE "${tabla}" ALTER COLUMN sucursal_id SET NOT NULL`, {
+          transaction: t
+        });
       }
       await queryInterface.addIndex('Pedidos', ['sucursal_id', 'fecha'], { transaction: t });
 
