@@ -5,6 +5,9 @@ import sequelize from '../config/database.js';
 // de recuperación (con el OTP cualquiera podría cambiar la contraseña).
 const CAMPOS_PRIVADOS = [
   'contrasenia',
+  // Obsoleto (18-11-2026): ya no se pide ni se muestra; solo sale en la
+  // exportación de datos del cliente (privacidadService).
+  'tipo_cliente',
   'reset_password_token',
   'reset_password_expires',
   'reset_password_attempts'
@@ -50,8 +53,9 @@ Cliente.init({
     allowNull: true
   },
   tipo_cliente: {
+    // Obsoleto: opcional desde la migración 20261118000001.
     type: DataTypes.ENUM('Estudiante', 'Docente', 'Personal Administrativo', 'Persona externa'),
-    allowNull: false
+    allowNull: true
   },
   contrasenia: {
     type: DataTypes.STRING(255),

@@ -172,7 +172,6 @@ describe('Clientes por restaurante (afiliación)', () => {
         nombres: 'Carla',
         apellidos: 'Mesa',
         correo_electronico: 'carla@prueba.test',
-        tipo_cliente: 'Docente',
         contrasenia: 'Clave#123',
         consentimiento_presencial: true
       });

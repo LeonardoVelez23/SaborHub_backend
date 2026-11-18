@@ -28,7 +28,6 @@ const registro = (datos = {}) => ({
   nombres: 'Ana',
   apellidos: "O'Brien",
   correo_electronico: 'ana@prueba.test',
-  tipo_cliente: 'Estudiante',
   contrasenia: 'Segura#2026',
   acepta_terminos: true,
   version_legal: VERSION_LEGAL,

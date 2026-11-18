@@ -2,14 +2,6 @@ import { ErrorNegocio } from '../errors/ErrorNegocio.js';
 import { RegistroDuplicado } from '../errors/RegistroDuplicado.js';
 import { cambioDeContrasenia, comprobarDuenio, opcional, sinContrasenia, validarPolitica } from './cuentas.js';
 
-export const TIPOS_CLIENTE = ['Estudiante', 'Docente', 'Personal Administrativo', 'Persona externa'];
-
-const validarTipo = (tipo) => {
-  if (!TIPOS_CLIENTE.includes(tipo)) {
-    throw new ErrorNegocio('tipo_cliente debe ser: Estudiante, Docente, Personal Administrativo o Persona externa');
-  }
-};
-
 /** Identificación y correo únicos entre clientes (RN-18). */
 const unico = async (operacion) => {
   try {
@@ -70,13 +62,13 @@ export const crearClienteService = ({ clientes, afiliacion, otps, contrasenias, 
    * con `consentimiento_presencial: true` lo afilia a su restaurante (RF-43).
    */
   crear: async (usuario, datos) => {
-    const { identificacion, nombres, apellidos, correo_electronico, telefono, tipo_cliente, contrasenia } = datos;
-    if (!identificacion || !nombres || !apellidos || !correo_electronico || !tipo_cliente || !contrasenia) {
+    // tipo_cliente es obsoleto (18-11-2026): si llega (versiones viejas de la app), se ignora.
+    const { identificacion, nombres, apellidos, correo_electronico, telefono, contrasenia } = datos;
+    if (!identificacion || !nombres || !apellidos || !correo_electronico || !contrasenia) {
       throw new ErrorNegocio(
-        'Los campos identificacion, nombres, apellidos, correo_electronico, tipo_cliente y contrasenia son obligatorios'
+        'Los campos identificacion, nombres, apellidos, correo_electronico y contrasenia son obligatorios'
       );
     }
-    validarTipo(tipo_cliente);
     validarPolitica(contrasenia);
 
     const delPersonal = esPersonal(usuario);
@@ -98,7 +90,6 @@ export const crearClienteService = ({ clientes, afiliacion, otps, contrasenias, 
         apellidos: apellidos.trim(),
         correo_electronico: correo_electronico.trim().toLowerCase(),
         telefono: opcional(telefono),
-        tipo_cliente,
         contrasenia: await contrasenias.hash(contrasenia),
         ...aceptacionLegal
       })
@@ -114,11 +105,10 @@ export const crearClienteService = ({ clientes, afiliacion, otps, contrasenias, 
    * Cambiar la contraseña exige el código del correo, salvo al superadmin.
    */
   actualizar: async (id, usuario, datos) => {
-    const { identificacion, nombres, apellidos, correo_electronico, telefono, tipo_cliente } = datos;
+    const { identificacion, nombres, apellidos, correo_electronico, telefono } = datos;
     comprobarCuenta(usuario, id);
     const cliente = await clientes.buscar(id);
     if (!cliente) throw noEncontrado();
-    if (tipo_cliente) validarTipo(tipo_cliente);
 
     const cambio = await cambioDeContrasenia(
       { cuenta: cliente, contrasenia: datos.contrasenia, otp: datos.otp, sinOtp: esSuperadmin(usuario) },
@@ -132,7 +122,6 @@ export const crearClienteService = ({ clientes, afiliacion, otps, contrasenias, 
         apellidos: apellidos?.trim() ?? cliente.apellidos,
         correo_electronico: correo_electronico?.trim().toLowerCase() ?? cliente.correo_electronico,
         telefono: telefono !== undefined ? opcional(telefono) : cliente.telefono,
-        tipo_cliente: tipo_cliente ?? cliente.tipo_cliente,
         ...cambio
       })
     );

@@ -43,7 +43,6 @@ export const crearCliente = async (datos = {}) => {
     nombres: `Cliente${n}`,
     apellidos: 'Prueba',
     correo_electronico: `cliente${n}@prueba.test`,
-    tipo_cliente: 'Estudiante',
     contrasenia: await bcrypt.hash(PASSWORD, 4),
     ...datos
   });

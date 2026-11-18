@@ -24,7 +24,7 @@ const CLAVE = 'Nueva#2026';
 describe('Cuentas de clientes y empleados (RF-01, RF-06, RF-07)', () => {
   it('el registro exige aceptar la versión vigente; el personal no acepta por el cliente', async () => {
     const svc = crearClienteService({ clientes: repo([]), otps: otps(), contrasenias, versionLegal: 'v2', ahora: () => new Date(0) });
-    const datos = { identificacion: '1', nombres: 'Ana', apellidos: 'Paz', correo_electronico: ' ANA@X.COM ', tipo_cliente: 'Docente', contrasenia: CLAVE };
+    const datos = { identificacion: '1', nombres: 'Ana', apellidos: 'Paz', correo_electronico: ' ANA@X.COM ', contrasenia: CLAVE };
     await expect(svc.crear(null, datos)).rejects.toThrow('Debes aceptar');
     await expect(svc.crear(null, { ...datos, acepta_terminos: true, version_legal: 'v1' })).rejects.toThrow('se actualizaron');
     const ana = await svc.crear(null, { ...datos, acepta_terminos: true, version_legal: 'v2' });

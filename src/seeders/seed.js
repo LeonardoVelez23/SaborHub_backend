@@ -386,7 +386,6 @@ const seed = async () => {
         nombres: 'Diego',
         apellidos: 'Gomez',
         telefono: '3159876543',
-        tipo_cliente: 'Estudiante',
         contrasenia: passwordCliente
       }
     });

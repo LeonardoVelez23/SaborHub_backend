@@ -37,10 +37,20 @@ describe('Perfil del cliente (RF-06)', () => {
     const res = await api()
       .put('/api/v1/perfil')
       .set(auth(token))
-      .send({ nombres: 'Ana María', telefono: '', tipo_cliente: 'Docente' });
+      .send({ nombres: 'Ana María', telefono: '' });
 
     expect(res.status).toBe(200);
-    expect(res.body.data).toMatchObject({ nombres: 'Ana María', telefono: null, tipo_cliente: 'Docente' });
+    expect(res.body.data).toMatchObject({ nombres: 'Ana María', telefono: null });
+  });
+
+  it('tipo_cliente es obsoleto: se ignora al editar y no sale en la respuesta', async () => {
+    const res = await api()
+      .put('/api/v1/perfil')
+      .set(auth(token))
+      .send({ apellidos: 'Paz', tipo_cliente: 'NoExiste' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).not.toHaveProperty('tipo_cliente');
   });
 
   it('cambiar la contraseña desde el perfil exige el OTP', async () => {

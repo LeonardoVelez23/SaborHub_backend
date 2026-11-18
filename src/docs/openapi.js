@@ -140,7 +140,6 @@ export const openapi = {
         }
       },
       Rol: { enum: ['cliente', 'admin', 'empleado', 'cajero', 'cocinero', 'mesero'] },
-      TipoCliente: { enum: ['Estudiante', 'Docente', 'Personal Administrativo', 'Persona externa'] },
       EstadoPedido: { enum: ['solicitado', 'confirmado', 'en preparación', 'listo', 'entregado', 'cancelado'] },
       Modalidad: { enum: ['presencial', 'en línea'] },
       MetodoPago: { enum: ['efectivo', 'tarjeta', 'transferencia'] },
@@ -253,7 +252,6 @@ export const openapi = {
           apellidos: { type: 'string', maxLength: 100 },
           correo_electronico: { type: 'string', format: 'email', maxLength: 150 },
           telefono: { type: ['string', 'null'], maxLength: 20 },
-          tipo_cliente: ref('TipoCliente'),
           legal_version: { type: ['string', 'null'] },
           legal_aceptado_en: { type: ['string', 'null'], format: 'date-time' },
           eliminado_en: { type: ['string', 'null'], format: 'date-time' },
@@ -803,15 +801,14 @@ export const openapi = {
         'x-reglas': ['RN-18', 'RNF-05'],
         ...cuerpo({
           type: 'object',
-          required: ['identificacion', 'nombres', 'apellidos', 'correo_electronico', 'tipo_cliente', 'contrasenia'],
+          required: ['identificacion', 'nombres', 'apellidos', 'correo_electronico', 'contrasenia'],
           properties: {
             identificacion: { type: 'string', maxLength: 20 },
             nombres: { type: 'string' },
             apellidos: { type: 'string' },
             correo_electronico: { type: 'string', format: 'email' },
             telefono: { type: ['string', 'null'] },
-            tipo_cliente: ref('TipoCliente'),
-            contrasenia: ref('Contrasenia'),
+              contrasenia: ref('Contrasenia'),
             acepta_terminos: { const: true },
             version_legal: { type: 'string' },
             consentimiento_presencial: { type: 'boolean', description: 'Solo personal: el cliente aceptó en persona compartir sus datos con el restaurante.' }
@@ -895,8 +892,7 @@ export const openapi = {
             apellidos: { type: 'string' },
             correo_electronico: { type: 'string' },
             telefono: { type: ['string', 'null'] },
-            tipo_cliente: ref('TipoCliente'),
-            contrasenia: ref('Contrasenia'),
+              contrasenia: ref('Contrasenia'),
             otp: { type: 'string' }
           }
         }),
@@ -1239,8 +1235,7 @@ export const openapi = {
             nombres: { type: 'string' },
             apellidos: { type: 'string' },
             telefono: { type: ['string', 'null'] },
-            tipo_cliente: ref('TipoCliente'),
-            contrasenia: ref('Contrasenia'),
+              contrasenia: ref('Contrasenia'),
             otp: { type: 'string' }
           }
         }),
@@ -1324,7 +1319,7 @@ export const openapi = {
             type: 'object',
             properties: {
               generado_en: { type: 'string', format: 'date-time' },
-              cliente: { type: 'object', description: 'identificacion, nombres, apellidos, correo_electronico, telefono, tipo_cliente, registrado_en, actualizado_en' },
+              cliente: { type: 'object', description: 'identificacion, nombres, apellidos, correo_electronico, telefono, tipo_cliente (solo si quedó guardado: campo obsoleto), registrado_en, actualizado_en' },
               foto_perfil: { type: ['object', 'null'], description: 'tipo, actualizada_en, imagen_base64' },
               ingreso_biometrico: lista({ type: 'object', description: 'dispositivo, activado_en, ultimo_uso (sin la credencial)' }),
               carrito: lista({ type: 'object', description: 'producto (nombre), cantidad, agregado_en' }),

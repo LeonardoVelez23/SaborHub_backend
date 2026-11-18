@@ -25,7 +25,8 @@ export const crearPrivacidadService = ({ clientes, fotos, privacidad, afiliacion
         apellidos: cliente.apellidos,
         correo_electronico: cliente.correo_electronico,
         telefono: cliente.telefono,
-        tipo_cliente: cliente.tipo_cliente,
+        // Obsoleto: solo si quedó guardado de antes del 18-11-2026.
+        ...(cliente.tipo_cliente ? { tipo_cliente: cliente.tipo_cliente } : {}),
         registrado_en: cliente.createdAt,
         actualizado_en: cliente.updatedAt
       },

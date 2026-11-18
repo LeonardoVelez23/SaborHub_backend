@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 
-const DATOS_CLIENTE = ['id', 'identificacion', 'nombres', 'apellidos', 'correo_electronico', 'telefono', 'tipo_cliente'];
+const DATOS_CLIENTE = ['id', 'identificacion', 'nombres', 'apellidos', 'correo_electronico', 'telefono'];
 const DATOS_AFILIACION = ['restaurante_id', 'estado', 'origen', 'afiliado_en', 'bloqueado_en', 'motivo_bloqueo'];
 
 /**

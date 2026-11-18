@@ -53,7 +53,6 @@ describe('Cliente Routes (/api/v1/clientes)', () => {
         nombres: 'María',
         apellidos: 'López',
         correo_electronico: 'maria@test.com',
-        tipo_cliente: 'Estudiante',
         toJSON: () => ({ id: 1, nombres: 'María' })
       };
       Cliente.create.mockImplementationOnce(async () => mockNuevo);
@@ -65,7 +64,6 @@ describe('Cliente Routes (/api/v1/clientes)', () => {
           nombres: 'María',
           apellidos: 'López',
           correo_electronico: 'maria@test.com',
-          tipo_cliente: 'Estudiante',
           contrasenia: 'Password123!',
           acepta_terminos: true,
           version_legal: VERSION_LEGAL
@@ -88,7 +86,6 @@ describe('Cliente Routes (/api/v1/clientes)', () => {
           nombres: 'María',
           apellidos: 'López',
           correo_electronico: 'existente@test.com',
-          tipo_cliente: 'Estudiante',
           contrasenia: 'Password123!',
           acepta_terminos: true,
           version_legal: VERSION_LEGAL
