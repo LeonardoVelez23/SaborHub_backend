@@ -62,6 +62,57 @@ describe('Restaurantes y sucursales', () => {
     expect(gestion.body.data.map((s) => s.nombre).sort()).toEqual([A.nombre, 'Norte'].sort());
   });
 
+  it('la ubicación de la sucursal: las dos coordenadas o ninguna, en rango y como número (app: la más cercana)', async () => {
+    const crear = (token, datos) => api().post('/api/v1/sucursales').set(auth(token)).send(datos);
+    const editar = (token, id, datos) => api().put(`/api/v1/sucursales/${id}`).set(auth(token)).send(datos);
+    const base = { nombre: 'Norte', direccion: 'Av. Norte' };
+
+    // Validaciones: juntas, número y rango.
+    const juntas = 'latitud y longitud se envían juntas: las dos con valor o las dos en null';
+    expect((await crear(adminX, { ...base, latitud: -0.21 })).body.message).toBe(juntas);
+    expect((await crear(adminX, { ...base, latitud: -0.21, longitud: null })).body.message).toBe(juntas);
+    expect((await crear(adminX, { ...base, latitud: '-0.21', longitud: -78.49 })).body.message).toBe(
+      'latitud debe ser un número entre -90 y 90'
+    );
+    expect((await crear(adminX, { ...base, latitud: 91, longitud: 0 })).status).toBe(400);
+    expect((await crear(adminX, { ...base, latitud: 0, longitud: -180.5 })).body.message).toBe(
+      'longitud debe ser un número entre -180 y 180'
+    );
+
+    // Crea con coordenadas; se devuelven como número, no como texto.
+    const norte = await crear(adminX, { ...base, latitud: -0.210123, longitud: -78.489456 });
+    expect(norte.status).toBe(201);
+    expect(norte.body.data).toMatchObject({ latitud: -0.210123, longitud: -78.489456 });
+
+    // El admin de la sucursal no cambia la ubicación; el del restaurante y el superadmin sí.
+    expect((await editar(adminA, A.id, { latitud: -0.2, longitud: -78.5 })).status).toBe(403);
+    expect((await editar(adminX, A.id, { latitud: -0.2 })).status).toBe(400);
+    expect((await editar(adminX, A.id, { latitud: -0.2, longitud: -78.5 })).body.data).toMatchObject({ latitud: -0.2, longitud: -78.5 });
+    expect((await editar(superadmin, C.id, { latitud: 10, longitud: 20 })).status).toBe(200);
+    // Editar otro campo no las toca; null las borra.
+    expect((await editar(adminX, A.id, { telefono: '022' })).body.data.latitud).toBe(-0.2);
+    expect((await editar(adminX, norte.body.data.id, { latitud: null, longitud: null })).body.data).toMatchObject({
+      latitud: null,
+      longitud: null
+    });
+
+    // Lista pública, detalle y gestión: números.
+    const publica = await api().get('/api/v1/sucursales');
+    expect(publica.body.data.find((s) => s.id === A.id)).toMatchObject({ latitud: -0.2, longitud: -78.5 });
+    expect(publica.body.data.find((s) => s.id === norte.body.data.id)).toMatchObject({ latitud: null, longitud: null });
+    expect((await api().get(`/api/v1/sucursales/${C.id}`)).body.data).toMatchObject({ latitud: 10, longitud: 20 });
+    const gestion = await api().get('/api/v1/sucursales/gestion').set(auth(adminX));
+    expect(typeof gestion.body.data.find((s) => s.id === A.id).latitud).toBe('number');
+  });
+
+  it('la base rechaza una sola coordenada o fuera de rango', async () => {
+    await expect(A.update({ latitud: 1, longitud: null })).rejects.toThrow();
+    await expect(A.update({ latitud: 95, longitud: 0 })).rejects.toThrow();
+    await A.update({ latitud: 1.5, longitud: 2.5 });
+    await A.reload();
+    expect(A.latitud).toBe(1.5);
+  });
+
   it('la lista pública muestra solo sucursales activas de restaurantes activos, sin datos de pago (RF-37)', async () => {
     await A.update({ payphone_store_id: 'tienda-secreta' });
     await Sucursal.create({ restaurante_id: A.restaurante_id, nombre: 'Cerrada', direccion: 'X', activa: false });

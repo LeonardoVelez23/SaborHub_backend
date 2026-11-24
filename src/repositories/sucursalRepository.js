@@ -2,7 +2,7 @@ import { sinDuplicados } from '../errors/RegistroDuplicado.js';
 import { filtroDeSucursales, porId } from './alcance.js';
 
 /** Datos públicos de una sucursal (sin la tienda de Payphone). */
-const PUBLICOS = ['id', 'restaurante_id', 'nombre', 'direccion', 'telefono', 'horario'];
+const PUBLICOS = ['id', 'restaurante_id', 'nombre', 'direccion', 'telefono', 'horario', 'latitud', 'longitud'];
 
 /** Sucursales. `m` son los modelos (se leen al usarse). */
 export const crearSucursalRepository = (m) => {

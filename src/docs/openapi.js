@@ -180,6 +180,8 @@ export const openapi = {
           horario: ref('Horario'),
           activa: { type: 'boolean' },
           payphone_store_id: { type: ['string', 'null'] },
+          latitud: { type: ['number', 'null'], description: 'Ubicación del local (grados decimales); null si no se ha registrado.' },
+          longitud: { type: ['number', 'null'], description: 'Ubicación del local; null si no se ha registrado.' },
           restaurante: { type: 'object', properties: { id: { type: 'integer' }, nombre: { type: 'string' }, estado: { type: 'string' } } }
         }
       },
@@ -193,6 +195,8 @@ export const openapi = {
           direccion: { type: 'string' },
           telefono: { type: ['string', 'null'] },
           horario: ref('Horario'),
+          latitud: { type: ['number', 'null'], description: 'Grados decimales; null si no se ha registrado. Con ella la app elige la sucursal más cercana (la ubicación del usuario no se envía).' },
+          longitud: { type: ['number', 'null'], description: 'Ubicación del local; null si no se ha registrado.' },
           abierta: { type: 'boolean', description: 'Si atiende ahora según su horario (RN-22).' },
           restaurante: { type: 'object', properties: { id: { type: 'integer' }, nombre: { type: 'string' } } }
         }
@@ -629,7 +633,9 @@ export const openapi = {
             telefono: { type: 'string' },
             horario: ref('Horario'),
             activa: { type: 'boolean' },
-            payphone_store_id: { type: 'string' }
+            payphone_store_id: { type: 'string' },
+            latitud: { type: ['number', 'null'], minimum: -90, maximum: 90, description: 'Grados decimales (WGS84). Con longitud: las dos o ninguna; null las borra.' },
+            longitud: { type: ['number', 'null'], minimum: -180, maximum: 180, description: 'Grados decimales (WGS84). Va con latitud.' },
           }
         }),
         responses: { ...ok('Creada', ref('Sucursal'), '201'), ...E400, ...E401, ...E403 }
@@ -653,7 +659,7 @@ export const openapi = {
       put: {
         tags: ['Restaurantes'],
         summary: 'Editar sucursal (RF-36)',
-        description: 'admin_restaurante y superadmin: todo. Admin de la sucursal: solo telefono y horario (403 si no). Fuera del alcance: 404.',
+        description: 'admin_restaurante y superadmin: todo, incluida la ubicación (latitud y longitud). Admin de la sucursal: solo telefono y horario (403 si no). Fuera del alcance: 404.',
         'x-reglas': ['RN-21', 'RN-22', 'RN-24'],
         ...protegido(['admin']),
         ...cuerpo({
@@ -664,7 +670,9 @@ export const openapi = {
             telefono: { type: ['string', 'null'] },
             horario: ref('Horario'),
             activa: { type: 'boolean' },
-            payphone_store_id: { type: ['string', 'null'] }
+            payphone_store_id: { type: ['string', 'null'] },
+            latitud: { type: ['number', 'null'], minimum: -90, maximum: 90, description: 'Grados decimales (WGS84). Con longitud: las dos o ninguna; null las borra.' },
+            longitud: { type: ['number', 'null'], minimum: -180, maximum: 180, description: 'Grados decimales (WGS84). Va con latitud.' },
           }
         }),
         responses: { ...ok('Actualizada', ref('Sucursal')), ...E400, ...E401, ...E403, ...E404 }

@@ -9,6 +9,7 @@ const seed = async () => {
     const [restaurante] = await Restaurante.findOrCreate({ where: { nombre: 'Sabor Politécnico' } });
     const [sucursal] = await Sucursal.findOrCreate({
       where: { restaurante_id: restaurante.id, nombre: 'Principal' },
+      // Sin latitud ni longitud: se registran desde el panel con la ubicación real.
       defaults: { direccion: 'Por definir' }
     });
     const alcance = { restaurante_id: restaurante.id, sucursal_id: sucursal.id };

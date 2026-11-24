@@ -22,6 +22,26 @@ const sinIndefinidos = (datos) => Object.fromEntries(Object.entries(datos).filte
 
 const ESTADOS = ['activo', 'suspendido'];
 
+const coordenada = (valor, campo, limite) => {
+  if (valor === null) return null;
+  if (typeof valor !== 'number' || !Number.isFinite(valor) || Math.abs(valor) > limite) {
+    throw new ErrorNegocio(`${campo} debe ser un número entre -${limite} y ${limite}`);
+  }
+  return valor;
+};
+
+/**
+ * Latitud y longitud van juntas: ninguna (no cambian), las dos con número o
+ * las dos en null (se borran). Una sola, o una null y otra no, es 400.
+ */
+export const coordenadasDe = ({ latitud, longitud }) => {
+  if (latitud === undefined && longitud === undefined) return {};
+  if (latitud === undefined || longitud === undefined || (latitud === null) !== (longitud === null)) {
+    throw new ErrorNegocio('latitud y longitud se envían juntas: las dos con valor o las dos en null');
+  }
+  return { latitud: coordenada(latitud, 'latitud', 90), longitud: coordenada(longitud, 'longitud', 180) };
+};
+
 /**
  * Restaurantes (RF-35). Solo el superadmin los crea, suspende o reactiva
  * (RN-24); el administrador de un restaurante edita sus datos de contacto.
@@ -96,8 +116,8 @@ export const crearRestauranteService = ({ restaurantes }) => {
 
 /**
  * Sucursales (RF-36, RF-37). Las crean el superadmin (en cualquier
- * restaurante) y el administrador de restaurante (en el suyo). El admin de
- * una sucursal solo cambia su teléfono y horario.
+ * restaurante) y el administrador de restaurante (en el suyo), con su
+ * ubicación. El admin de una sucursal solo cambia su teléfono y horario.
  */
 export const crearSucursalService = ({ sucursales, reloj }) => {
   const nivel = (usuario) => alcanceDe(usuario).nivel;
@@ -128,7 +148,8 @@ export const crearSucursalService = ({ sucursales, reloj }) => {
       telefono: textoOpcional(telefono, 'telefono', 20),
       horario: horario === undefined ? undefined : validarHorario(horario),
       activa,
-      payphone_store_id: textoOpcional(payphone_store_id, 'payphone_store_id', 100)
+      payphone_store_id: textoOpcional(payphone_store_id, 'payphone_store_id', 100),
+      ...coordenadasDe(entrada)
     });
   };
 

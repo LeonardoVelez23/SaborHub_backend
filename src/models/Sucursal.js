@@ -1,5 +1,6 @@
 import { Model, DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
+import { comoNumero } from './decimal.js';
 
 /** Local de un restaurante, con su menú, pedidos y personal (DERCAS 12). */
 class Sucursal extends Model {}
@@ -14,7 +15,23 @@ Sucursal.init(
     // {"lunes": [["07:00", "16:00"]], ...}; null = sin horario publicado.
     horario: { type: DataTypes.JSONB, allowNull: true },
     activa: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
-    payphone_store_id: { type: DataTypes.STRING(100), allowNull: true }
+    payphone_store_id: { type: DataTypes.STRING(100), allowNull: true },
+    // Ubicación del local para que la app elija la más cercana. Van juntas
+    // (ambas null o ambas con valor); Postgres devuelve NUMERIC como texto.
+    latitud: {
+      type: DataTypes.DECIMAL(9, 6),
+      allowNull: true,
+      get() {
+        return comoNumero(this.getDataValue('latitud'));
+      }
+    },
+    longitud: {
+      type: DataTypes.DECIMAL(9, 6),
+      allowNull: true,
+      get() {
+        return comoNumero(this.getDataValue('longitud'));
+      }
+    }
   },
   {
     sequelize,
