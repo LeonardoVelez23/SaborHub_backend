@@ -6,6 +6,11 @@
  * publican como páginas HTML en /legal/*. Al registrarse, el cliente acepta
  * la versión vigente y se guarda en Clientes.legal_version / legal_aceptado_en.
  *
+ * Son documentos de la plataforma SaborHub (modelo tipo Uber): un solo
+ * registro y una sola aceptación para pedir en cualquier restaurante. Al
+ * pedir, el restaurante recibe solo los datos necesarios para atender ese
+ * pedido; no hay un consentimiento aparte por restaurante.
+ *
  * Al cambiar cualquier texto, subir VERSION_LEGAL (fecha AAAA-MM-DD; si cambia
  * dos veces el mismo día, agregar .2, .3...): el registro rechaza
  * aceptaciones de una versión anterior.
@@ -15,7 +20,7 @@
  * - Ley Orgánica de Protección de Datos Personales (LOPDP), R.O. Supl. 459,
  *   26-05-2021 (art. 43 reformado en 2026): arts. 4, 7, 8, 9, 10, 12 a 20,
  *   24, 26, 34, 37, 39, 43, 46, 55 a 57. No se designa delegado de protección
- *   de datos: el restaurante no es del sector público ni trata datos sensibles
+ *   de datos: la plataforma no es del sector público ni trata datos sensibles
  *   a gran escala (art. 48). Reglamento General: Decreto
  *   Ejecutivo 904, R.O. 3er Supl. 435, 13-11-2023.
  * - Ley Orgánica de Defensa del Consumidor (LODC), R.O. Supl. 116,
@@ -24,15 +29,15 @@
  *   (LCE), R.O. Supl. 557, 17-04-2002: arts. 2, 45 a 49.
  *
  * BORRADOR PARA REVISIÓN LEGAL: los datos entre corchetes los completa el
- * responsable del restaurante, y un abogado debe revisar el texto antes de
+ * titular de la plataforma, y un abogado debe revisar el texto antes de
  * publicar la app en las tiendas.
  */
-export const VERSION_LEGAL = '2026-11-16.4';
+export const VERSION_LEGAL = '2026-11-24';
 
 export const RESPONSABLE = {
-  nombre: 'Sabor Politécnico, restaurante universitario',
+  nombre: 'SaborHub, plataforma de pedidos a restaurantes',
   razonSocial: '[Razón social o nombre del titular, y número de RUC]',
-  direccion: '[Dirección del domicilio legal, Calceta, Manabí]',
+  direccion: '[Dirección del domicilio legal]',
   telefono: '[Teléfono de contacto]',
   correo: '[Correo de contacto para protección de datos]'
 };
@@ -46,7 +51,8 @@ const terminos = {
       titulo: '1. Quiénes somos y qué regulan estos términos',
       parrafos: [
         `La aplicación móvil y los servicios digitales de ${RESPONSABLE.nombre} (en adelante, "la plataforma") los presta ${RESPONSABLE.razonSocial}, con domicilio en ${RESPONSABLE.direccion}, teléfono ${RESPONSABLE.telefono} y correo ${RESPONSABLE.correo}.`,
-        'Estos términos regulan la relación entre la plataforma y la persona que crea una cuenta (en adelante, "el cliente") para consultar el menú, hacer pedidos, seguir su estado y pagarlos. Son un contrato de adhesión: en caso de duda, se interpretan a favor del cliente, conforme a la Ley Orgánica de Defensa del Consumidor (LODC).',
+        'SaborHub es una plataforma que reúne a varios restaurantes (en adelante, "los restaurantes"), cada uno con una o más sucursales. Con una sola cuenta puedes ver el menú de cualquiera de ellos, hacer pedidos, seguir su estado y pagarlos. SaborHub intermedia entre tú y el restaurante: el restaurante vende, prepara y entrega los productos en su local, para que los retires o los consumas ahí. La plataforma no hace entregas a domicilio.',
+        'Estos términos regulan la relación entre la plataforma y la persona que crea una cuenta (en adelante, "el cliente"). Los aceptas una sola vez, al registrarte, y valen para todos los restaurantes de la plataforma. Son un contrato de adhesión: en caso de duda, se interpretan a favor del cliente, conforme a la Ley Orgánica de Defensa del Consumidor (LODC).',
         'Nada de lo que dicen limita los derechos que la LODC y las demás leyes del Ecuador reconocen al consumidor; cualquier estipulación en contrario no tiene efecto (LODC, art. 43).'
       ]
     },
@@ -61,9 +67,9 @@ const terminos = {
     {
       titulo: '3. Tu cuenta',
       parrafos: [
-        'Pueden registrarse estudiantes, docentes, personal administrativo y personas externas a la institución. Si eres menor de 18 años, necesitas la autorización de tu madre, padre o representante legal para crear una cuenta y hacer pedidos.',
+        'Puede registrarse cualquier persona. Si eres menor de 18 años, necesitas la autorización de tu madre, padre o representante legal para crear una cuenta y hacer pedidos.',
         'Los datos que ingresas deben ser verdaderos y estar actualizados; puedes corregirlos en Perfil. Con datos falsos o de otra persona no podremos identificarte al entregar tu pedido ni ayudarte a recuperar tu cuenta.',
-        'La cuenta es personal. Cuida tu contraseña y no la compartas. Por seguridad, la sesión se cierra sola a los 20 minutos de iniciarla y tras 5 minutos sin uso.',
+        'La cuenta es personal. Cuida tu contraseña y no la compartas. Por seguridad, la sesión se cierra al cerrar la aplicación y tras unos minutos sin uso.',
         'Si activas el ingreso con huella o rostro, podrá entrar a tu cuenta cualquier persona cuya huella o rostro esté registrado en tu teléfono: actívalo solo si eres la única persona registrada.',
         'Si crees que otra persona usa tu cuenta, cambia tu contraseña y avísanos de inmediato.'
       ]
@@ -71,7 +77,7 @@ const terminos = {
     {
       titulo: '4. Productos, precios y disponibilidad',
       parrafos: [
-        'El menú muestra el nombre, la descripción, el precio y la disponibilidad de cada producto. Los precios están en dólares de los Estados Unidos de América y son el valor final que pagas, con los impuestos incluidos (LODC, art. 9).',
+        'Cada restaurante publica el menú de cada una de sus sucursales y fija sus precios. El menú muestra el nombre, la descripción, el precio y la disponibilidad de cada producto. Los precios están en dólares de los Estados Unidos de América y son el valor final que pagas, con los impuestos incluidos (LODC, art. 9).',
         'Las fotografías de los productos son referenciales y pueden no coincidir exactamente con la presentación del plato.',
         'Si tienes alergias, intolerancias o restricciones alimentarias, consulta los ingredientes al personal del restaurante antes de pedir.',
         'La disponibilidad cambia durante el día. El sistema solo acepta un pedido si hay unidades suficientes, y el precio que se cobra es el vigente al momento de enviarlo. Si, ya enviado, hubiera un error en el precio o en la disponibilidad, el restaurante te lo informará antes de prepararlo y podrás elegir entre mantener el pedido o cancelarlo con la devolución total de lo que hayas pagado.'
@@ -80,8 +86,8 @@ const terminos = {
     {
       titulo: '5. Pedidos',
       parrafos: [
-        'El pedido queda hecho cuando lo envías desde el carrito y la aplicación te muestra su número. Cada pedido admite hasta 50 unidades por producto.',
-        'Puedes seguir su estado en Mis pedidos: solicitado, confirmado, en preparación, listo y entregado. Retíralo en el restaurante el mismo día, dentro del horario de atención.',
+        'Cada pedido es de una sola sucursal. Queda hecho cuando lo envías desde el carrito y la aplicación te muestra su número. Cada pedido admite hasta 50 unidades por producto.',
+        'Puedes seguir su estado en Mis pedidos: solicitado, confirmado, en preparación, listo y entregado. Lo retiras o lo consumes en el local de esa sucursal el mismo día, dentro de su horario de atención.',
         'La aplicación no permite cancelar un pedido una vez enviado. Si quieres cambiarlo o cancelarlo, acércate a la caja del restaurante antes de que empiece su preparación; si ya lo pagaste, se te devolverá el valor total.',
         'El restaurante puede cancelar un pedido cuando no pueda prepararlo, por ejemplo porque un producto se agotó o por caso fortuito o fuerza mayor. Te lo informará en la aplicación y, si ya lo pagaste, te devolverá el valor total.'
       ]
@@ -89,7 +95,7 @@ const terminos = {
     {
       titulo: '6. Pagos',
       parrafos: [
-        'Puedes pagar en el restaurante (efectivo, tarjeta o transferencia, según lo que tenga habilitado) o con tarjeta desde la aplicación. Cada pedido tiene un solo pago, por su valor total.',
+        'Puedes pagar en el local del restaurante (efectivo, tarjeta o transferencia, según lo que tenga habilitado) o con tarjeta desde la aplicación. Cada pedido tiene un solo pago, por su valor total.',
         'El pago con tarjeta desde la aplicación lo procesa Payphone, una pasarela de pagos, en su propia página segura. Los datos de tu tarjeta se escriben allí: la plataforma no los ve ni los guarda. Payphone aplica a ese pago sus propios términos y su política de privacidad.',
         'El pago solo se registra como aprobado cuando el servidor de la plataforma lo confirma con Payphone. Si cancelas o cierras la página de Payphone antes de terminar, no se hace ningún cobro.',
         'Si se cancela un pedido pagado con tarjeta, la devolución se hace por el mismo medio de pago. El tiempo en que se refleja en tu estado de cuenta depende del banco emisor de tu tarjeta.'
@@ -99,7 +105,7 @@ const terminos = {
       titulo: '7. Devoluciones, garantía y reclamos',
       parrafos: [
         'Por su naturaleza, los alimentos preparados no admiten el derecho de devolución de las compras a distancia una vez entregados (LODC, art. 45). Esto no afecta tu derecho a recibir lo que pediste y en buen estado: si recibes un producto distinto, incompleto o en mal estado, avísanos en el momento y se te repondrá o se te devolverá su valor (LODC, art. 4 num. 8).',
-        `Puedes presentar quejas o reclamos en la caja del restaurante, en su libro de reclamos (LODC, art. 4 num. 12) o por correo a ${RESPONSABLE.correo}.`,
+        `Puedes presentar quejas o reclamos en la caja del restaurante, en su libro de reclamos (LODC, art. 4 num. 12), o a SaborHub por correo a ${RESPONSABLE.correo}; si el reclamo es sobre un restaurante, se lo trasladaremos y te ayudaremos a darle seguimiento.`,
         'También puedes acudir a la Defensoría del Pueblo y a las demás autoridades competentes en defensa del consumidor.'
       ]
     },
@@ -113,15 +119,15 @@ const terminos = {
     {
       titulo: '9. Funcionamiento del servicio y responsabilidad',
       parrafos: [
-        'La plataforma está pensada para funcionar durante el horario de atención del restaurante. Puede tener interrupciones por mantenimiento o por fallas de los servicios de terceros que usa (internet, alojamiento, correo, pasarela de pagos); procuraremos que sean breves.',
-        'El restaurante responde por la calidad de los productos y del servicio que presta, en los términos de la LODC. No responde por daños causados por caso fortuito o fuerza mayor, ni por el uso de tu cuenta por terceros cuando se deba a que compartiste tu contraseña o tu teléfono.'
+        'La plataforma está pensada para funcionar durante el horario de atención de los restaurantes. Puede tener interrupciones por mantenimiento o por fallas de los servicios de terceros que usa (internet, alojamiento, correo, pasarela de pagos); procuraremos que sean breves.',
+        'Cada restaurante responde por la calidad, la preparación y la entrega de los productos que vende, en los términos de la LODC. SaborHub responde por el funcionamiento de la plataforma, por mostrar la información que publica cada restaurante y por el tratamiento de tus datos. Ninguno responde por daños causados por caso fortuito o fuerza mayor, ni por el uso de tu cuenta por terceros cuando se deba a que compartiste tu contraseña o tu teléfono.'
       ]
     },
     {
       titulo: '10. Propiedad intelectual',
       parrafos: [
-        'La aplicación, su diseño, el nombre y el logotipo de Sabor Politécnico pertenecen a sus titulares. Puedes usarlos solo para hacer tus pedidos; no está permitido copiarlos, modificarlos ni distribuirlos.',
-        'Las fotografías de productos tomadas de terceros se usan conforme a sus licencias; sus autores y licencias se indican en la aplicación, en Perfil → Licencias y créditos.'
+        'La aplicación, su diseño, el nombre y el logotipo de SaborHub, y los nombres y logotipos de cada restaurante, pertenecen a sus titulares. Puedes usarlos solo para hacer tus pedidos; no está permitido copiarlos, modificarlos ni distribuirlos.',
+        'Las fotografías de productos tomadas de terceros se usan conforme a sus licencias.'
       ]
     },
     {
@@ -147,7 +153,7 @@ const terminos = {
       titulo: '14. Ley aplicable y solución de controversias',
       parrafos: [
         'Estos términos se rigen por las leyes de la República del Ecuador.',
-        'Te invitamos a buscar primero una solución directa con el restaurante. Si no hay acuerdo, las controversias se resolverán ante los jueces competentes de tu domicilio (LCE, art. 47). No se te impone ningún arbitraje ni mediación obligatorios (LODC, art. 43 num. 4).'
+        'Te invitamos a buscar primero una solución directa con el restaurante o con SaborHub. Si no hay acuerdo, las controversias se resolverán ante los jueces competentes de tu domicilio (LCE, art. 47). No se te impone ningún arbitraje ni mediación obligatorios (LODC, art. 43 num. 4).'
       ]
     },
     {
@@ -168,13 +174,14 @@ const privacidad = {
       titulo: '1. Para qué es esta política',
       parrafos: [
         'La Constitución del Ecuador reconoce tu derecho a la protección de tus datos personales (art. 66 num. 19). Esta política te informa, antes de que nos entregues tus datos, cómo los tratamos y cómo puedes ejercer tus derechos, como exige el artículo 12 de la Ley Orgánica de Protección de Datos Personales (LOPDP).',
-        'Se aplica a la aplicación móvil Sabor Politécnico, a su servidor y a la atención del restaurante relacionada con tu cuenta. Se rige por la LOPDP, su Reglamento General y las resoluciones de la Superintendencia de Protección de Datos Personales.'
+        'Se aplica a la aplicación móvil SaborHub, a su servidor y a la atención que te dan los restaurantes de la plataforma por tus pedidos. Es una sola política para toda la plataforma: la aceptas al registrarte y vale para cualquier restaurante en el que pidas. Se rige por la LOPDP, su Reglamento General y las resoluciones de la Superintendencia de Protección de Datos Personales.'
       ]
     },
     {
       titulo: '2. Responsable del tratamiento',
       parrafos: [
         `${RESPONSABLE.razonSocial}, que opera ${RESPONSABLE.nombre}, es el responsable del tratamiento de tus datos: decide para qué y cómo se tratan (LOPDP, art. 4).`,
+        'Los restaurantes no son responsables de tu cuenta: cada uno recibe, solo cuando le haces un pedido, los datos necesarios para atenderlo (ver la sección 7).',
         `Domicilio: ${RESPONSABLE.direccion}. Teléfono: ${RESPONSABLE.telefono}. Correo: ${RESPONSABLE.correo}.`
       ]
     },
@@ -182,10 +189,10 @@ const privacidad = {
       titulo: '3. Datos que tratamos',
       parrafos: [
         'Los obtenemos directamente de ti cuando usas la aplicación, salvo el resultado de los pagos con tarjeta, que nos envía Payphone.',
-        'Identificación y contacto: número de cédula, RUC o pasaporte; nombres; apellidos; correo electrónico; teléfono (opcional); y tipo de cliente (estudiante, docente, personal administrativo o persona externa).',
+        'Identificación y contacto: número de cédula, RUC o pasaporte; nombres; apellidos; correo electrónico; y teléfono (opcional).',
         'Cuenta: la contraseña, guardada con cifrado irreversible (nadie puede leerla, ni siquiera el personal), y la versión y la fecha en que aceptaste estos documentos.',
         'Foto de perfil: solo si decides subirla. Es opcional.',
-        'Carrito, pedidos y pagos: los productos y cantidades que dejas en tu carrito (para que no se pierdan al cerrar la aplicación o cambiar de teléfono); productos, cantidades, precios, fecha, hora, modalidad y estado de cada pedido; valor, método, estado y número de referencia de cada pago. En los pagos con tarjeta recibimos de Payphone solo el número de la transacción, el código de autorización, el monto y el resultado; nunca el número de la tarjeta, su fecha de vencimiento ni su código de seguridad.',
+        'Carrito, pedidos y pagos: los productos y cantidades que dejas en tu carrito (para que no se pierdan al cerrar la aplicación o cambiar de teléfono); productos, cantidades, precios, fecha, hora, modalidad y estado de cada pedido; restaurante y sucursal de cada pedido; valor, método, estado y número de referencia de cada pago. En los pagos con tarjeta recibimos de Payphone solo el número de la transacción, el código de autorización, el monto y el resultado; nunca el número de la tarjeta, su fecha de vencimiento ni su código de seguridad.',
         'Seguridad: los códigos de un solo uso para recuperar o cambiar tu contraseña (guardados cifrados; vencen a los 15 minutos) y, si activas el ingreso con huella o rostro, una credencial del dispositivo (guardada cifrada), el nombre del tipo de teléfono y la fecha de su último uso.',
         'Datos técnicos: la dirección IP, la fecha y la hora de las solicitudes que la aplicación hace al servidor, que quedan en sus registros de funcionamiento.',
         'En tu teléfono, protegidos por el sistema operativo, se guardan el código de tu sesión, la hora de tu último uso y, si la activas, la credencial del ingreso con huella o rostro.'
@@ -204,9 +211,9 @@ const privacidad = {
       parrafos: [
         'Crear y administrar tu cuenta, identificarte al iniciar sesión, recibir, preparar y entregar tus pedidos, registrar sus pagos y enviarte por correo los códigos para recuperar tu contraseña. Base legal: la ejecución del contrato que aceptas al registrarte (LOPDP, art. 7 num. 5).',
         'Proteger tu cuenta y la plataforma: cerrar sesiones vencidas, limitar los intentos de inicio de sesión, detectar accesos indebidos y conservar registros técnicos. Base legal: nuestro interés legítimo en la seguridad del servicio, que también te protege (arts. 7 num. 8 y 9).',
-        'Llevar la contabilidad y cumplir las obligaciones tributarias del restaurante con los registros de pedidos y pagos. Base legal: el cumplimiento de una obligación legal (art. 7 num. 2).',
+        'Llevar la contabilidad y cumplir las obligaciones tributarias de cada restaurante con los registros de pedidos y pagos. Base legal: el cumplimiento de una obligación legal (art. 7 num. 2).',
         'Mostrar tu foto de perfil y permitirte ingresar con huella o rostro. Base legal: tu consentimiento, que das al activar cada opción y que puedes retirar cuando quieras desde Perfil, sin dar explicaciones (arts. 7 num. 1 y 8). Retirarlo no afecta el uso de tu cuenta.',
-        'Elaborar estadísticas de ventas del restaurante (por ejemplo, productos más vendidos o ingresos por día), siempre agregadas y sin identificar a nadie. Base legal: interés legítimo (art. 7 num. 8).',
+        'Elaborar estadísticas de ventas de cada restaurante (por ejemplo, productos más vendidos o ingresos por día), siempre agregadas y sin identificar a nadie. Base legal: interés legítimo (art. 7 num. 8).',
         'Atender requerimientos de autoridades competentes. Base legal: una obligación legal o una orden judicial (art. 7 núms. 2 y 3).',
         'No usamos tus datos para publicidad, no los vendemos, no elaboramos perfiles sobre ti y no tomamos decisiones basadas únicamente en tratamientos automatizados que te afecten (art. 20). Si quisiéramos usarlos para otra finalidad, te lo informaremos y, cuando corresponda, te pediremos antes tu consentimiento.'
       ]
@@ -214,14 +221,15 @@ const privacidad = {
     {
       titulo: '6. Qué pasa si no entregas tus datos o son incorrectos',
       parrafos: [
-        'La identificación, los nombres, los apellidos, el correo y el tipo de cliente son necesarios para crear la cuenta: sin ellos no podemos registrarte ni entregarte pedidos a tu nombre. El teléfono, la foto y el ingreso con huella o rostro son opcionales (LOPDP, art. 12).',
+        'La identificación, los nombres, los apellidos y el correo son necesarios para crear la cuenta: sin ellos no podemos registrarte ni entregarte pedidos a tu nombre. El teléfono, la foto y el ingreso con huella o rostro son opcionales (LOPDP, art. 12).',
         'Si tus datos son incorrectos, puede que no te identifiquemos al retirar tu pedido o que no recibas el código para recuperar tu cuenta. Puedes corregirlos en cualquier momento en Perfil.'
       ]
     },
     {
       titulo: '7. Quién más accede a tus datos',
       parrafos: [
-        'El personal del restaurante (caja, cocina, meseros y administración) accede solo a los datos que necesita para atender tus pedidos y pagos, según su cargo.',
+        'Restaurantes: cuando haces un pedido en un restaurante, le comunicamos solo los datos necesarios para atenderlo: tus nombres y apellidos, tu identificación (si se necesita para la factura), tu correo o teléfono para contactarte por ese pedido, el detalle del pedido y su pago. El restaurante los usa solo para preparar y entregar tu pedido, cobrarlo, facturarlo y atender tus reclamos; no puede usarlos para publicidad ni cederlos. Un restaurante no ve tus pedidos en otros restaurantes ni a los clientes que nunca le han pedido.',
+        'Dentro de cada restaurante, su personal (caja, cocina, meseros y administración) accede solo a lo que necesita según su cargo. Desde Perfil puedes pedir que un restaurante deje de verte; volverá a verte si le haces un pedido nuevo. Cada restaurante también puede bloquear tu cuenta en sus locales, sin afectar el resto de la plataforma.',
         'Encargados del tratamiento: empresas que nos prestan servicios y tratan los datos solo por nuestra cuenta y según nuestras instrucciones, sin usarlos para fines propios (LOPDP, art. 34): Railway (servidor de la aplicación), Supabase (base de datos, alojada en Estados Unidos) y Brevo (envío de los correos con códigos, Unión Europea).',
         'Payphone procesa los pagos con tarjeta: recibe directamente en su página los datos de la tarjeta que escribes y, de nosotros, solo el monto y una referencia del pedido. Trata esos datos conforme a su propia política de privacidad.',
         'La aplicación descarga la tipografía de la interfaz desde los servidores de Google, que pueden registrar la dirección IP del teléfono.',
@@ -250,7 +258,7 @@ const privacidad = {
       titulo: '10. Tus derechos y cómo ejercerlos',
       parrafos: [
         'Tienes derecho a acceder a tus datos (LOPDP, art. 13), rectificarlos y actualizarlos (art. 14), pedir que se eliminen (art. 15), oponerte a su tratamiento (art. 16), recibirlos en un formato estructurado o pedir que se transmitan a otro responsable (portabilidad, art. 17), pedir la suspensión del tratamiento (art. 19), no ser objeto de decisiones basadas únicamente en tratamientos automatizados (art. 20) y revocar tu consentimiento en cualquier momento (art. 8). Ejercerlos es gratis y no necesitas justificarlo.',
-        'Desde la aplicación: en Perfil puedes corregir tus datos, cambiar o quitar tu foto y desactivar el ingreso con huella o rostro; en Perfil → Privacidad y datos puedes ver y descargar tus datos (acceso y portabilidad) y eliminar tu cuenta.',
+        'Desde la aplicación: en Perfil puedes corregir tus datos, cambiar o quitar tu foto y restablecer el ingreso con huella o rostro; en Perfil → Privacidad y datos puedes ver y descargar tus datos (acceso y portabilidad) y eliminar tu cuenta.',
         `Por correo: escribe a ${RESPONSABLE.correo} desde el correo de tu cuenta e indica qué derecho quieres ejercer. Si escribes desde otro correo, te pediremos verificar tu identidad. Responderemos en un máximo de 15 días (LOPDP, arts. 13 a 16).`,
         'Los adolescentes desde los 15 años pueden ejercer estos derechos directamente; los menores de 15 años, por medio de su representante legal (art. 24).',
         'Si crees que no atendimos tu solicitud o que vulneramos tus derechos, puedes presentar un reclamo ante la Superintendencia de Protección de Datos Personales.'
@@ -266,7 +274,7 @@ const privacidad = {
     {
       titulo: '12. Niñas, niños y adolescentes',
       parrafos: [
-        'La plataforma está dirigida a la comunidad universitaria y al público adulto. Si eres menor de 18 años, tu madre, padre o representante legal debe autorizar la creación de tu cuenta y conocer esta política (LOPDP, art. 12).'
+        'La plataforma está dirigida al público adulto. Si eres menor de 18 años, tu madre, padre o representante legal debe autorizar la creación de tu cuenta y conocer esta política (LOPDP, art. 12).'
       ]
     },
     {
@@ -287,7 +295,7 @@ export const DOCUMENTOS_LEGALES = { terminos, privacidad };
  */
 export const ELIMINAR_CUENTA = {
   tipo: 'eliminar-cuenta',
-  titulo: 'Eliminar tu cuenta de Sabor Politécnico',
+  titulo: 'Eliminar tu cuenta de SaborHub',
   version: VERSION_LEGAL,
   secciones: [
     {
@@ -307,7 +315,7 @@ export const ELIMINAR_CUENTA = {
       titulo: 'Qué se elimina y qué se conserva',
       parrafos: [
         'Se eliminan tu identificación, nombres, apellidos, correo electrónico, teléfono, foto de perfil, carrito, contraseña y el ingreso con huella o rostro de tus dispositivos. Ya no podrás iniciar sesión con esa cuenta.',
-        'Los pedidos y pagos se conservan sin ningún dato que te identifique, por las obligaciones contables y tributarias del restaurante.'
+        'Los pedidos y pagos se conservan sin ningún dato que te identifique, por las obligaciones contables y tributarias de los restaurantes.'
       ]
     }
   ]

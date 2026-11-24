@@ -165,10 +165,11 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
         const { lineas, total, sucursalId } = await reservarStock(cantidades, t);
         const sucursal = await sucursalQueRecibe(sucursalId, usuario);
         const mesaId = await mesaValida(mesa_id, { deCliente, modalidad, sucursalId }, t);
-        // Afiliación activa del cliente al restaurante (RN-27); el
-        // consumidor final no la necesita (RN-38).
+        // El primer pedido afilia al cliente al restaurante (RN-27); un
+        // cliente bloqueado ahí no puede pedir. El consumidor final no se
+        // afilia (RN-38).
         if (!cliente.es_consumidor_final) {
-          await afiliacion.exigirParaPedido({
+          await afiliacion.asegurarParaPedido({
             clienteId: cliente.id,
             restaurante: sucursal.restaurante,
             deCliente,

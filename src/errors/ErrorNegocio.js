@@ -4,7 +4,7 @@
  * con ese código. Así los servicios no conocen Express.
  *
  * `codigo` (opcional) es un identificador estable para que la app reaccione
- * sin depender del texto (p. ej. `afiliacion_requerida`), y `datos` lo que
+ * sin depender del texto (p. ej. `codigo_invalido`), y `datos` lo que
  * necesita para hacerlo; ambos se agregan a la respuesta.
  */
 export class ErrorNegocio extends Error {

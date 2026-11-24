@@ -91,7 +91,7 @@ export const openapi = {
       'JWT del cliente: 20 minutos fijos desde el login; del personal: 8 horas. Sin renovación.',
       '',
       '**Alcance del personal (RN-21)**: cada empleado ve y modifica solo lo de su sucursal; el cargo `admin_restaurante`, todas las sucursales de su restaurante; `superadmin`, toda la plataforma (ambos tienen el rol admin).',
-      '**Clientes por restaurante (RN-26 a RN-28)**: la cuenta del cliente es de la plataforma; cada restaurante ve solo a sus clientes afiliados (`/afiliaciones`), y solo el propio cliente o el superadmin modifican la cuenta.',
+      '**Clientes por restaurante (RN-26 a RN-28)**: la cuenta, los términos y la política de privacidad son de la plataforma SaborHub y se aceptan una vez al registrarse; el primer pedido en un restaurante afilia al cliente sin pasos extra, y cada restaurante ve solo a los clientes que le han pedido (`/afiliaciones`). Solo el propio cliente o el superadmin modifican la cuenta.',
       'El alcance sale de la base, nunca de la petición. Un pedido, pago, producto, categoría o empleado fuera del alcance responde 404, como si no existiera.',
       '',
       '**Importes**: números con 2 decimales (`precio`, `valor_total`, `subtotal`, `valor`). Moneda USD.',
@@ -113,21 +113,21 @@ export const openapi = {
           message: { type: 'string' },
           codigo: {
             type: 'string',
-            description: 'Solo en algunos errores, para reaccionar sin depender del texto. `afiliacion_requerida` (409): el cliente debe aceptar compartir sus datos con el restaurante (POST /afiliaciones).'
+            description: 'Solo en algunos errores, para reaccionar sin depender del texto.'
           },
           data: {
             type: 'object',
-            description: 'Datos del error con `codigo`; en `afiliacion_requerida`: {restaurante_id, restaurante}.'
+            description: 'Datos del error con `codigo`.'
           }
         }
       },
       Afiliacion: {
         type: 'object',
-        description: 'Afiliación del cliente a un restaurante (RF-43): su consentimiento para que ese restaurante trate sus datos.',
+        description: 'Afiliación del cliente a un restaurante (RF-43): registra que le pidió a ese restaurante, que por eso lo ve (RN-26). La crea el primer pedido (`origen` pedido).',
         properties: {
           restaurante_id: { type: 'integer' },
           estado: { enum: ['activo', 'bloqueado', 'retirado'] },
-          origen: { enum: ['app', 'presencial'] },
+          origen: { enum: ['app', 'presencial', 'pedido'] },
           legal_version: { type: 'string' },
           afiliado_en: { type: 'string', format: 'date-time' },
           bloqueado_en: { type: ['string', 'null'], format: 'date-time' },
@@ -764,15 +764,15 @@ export const openapi = {
       get: {
         tags: ['Afiliaciones'],
         summary: 'Mis restaurantes (RF-45)',
-        description: 'Restaurantes con los que el cliente compartió sus datos, con el estado de cada afiliación.',
+        description: 'Restaurantes a los que el cliente ha pedido, con el estado de cada afiliación.',
         ...protegido(['cliente']),
         responses: { ...ok('Lista', lista(ref('Afiliacion'))), ...E401, ...E403 }
       },
       post: {
         tags: ['Afiliaciones'],
-        summary: 'Aceptar compartir mis datos con un restaurante (RF-43)',
+        summary: 'Afiliarme a un restaurante (RF-43, opcional)',
         description:
-          'Exige `acepta_compartir: true` y `version_legal` igual a la vigente de GET /legal. Idempotente si ya está activa; reactiva una retirada. Bloqueada en ese restaurante: 403.',
+          'Ya no es necesario para pedir: el primer pedido afilia al cliente. Se mantiene por compatibilidad. Exige `acepta_compartir: true` y `version_legal` igual a la vigente de GET /legal. Idempotente si ya está activa; reactiva una retirada. Bloqueada en ese restaurante: 403.',
         'x-reglas': ['RN-27'],
         ...protegido(['cliente']),
         ...cuerpo({
@@ -791,9 +791,9 @@ export const openapi = {
       parameters: [idParam('restauranteId')],
       delete: {
         tags: ['Afiliaciones'],
-        summary: 'Retirar mi consentimiento a un restaurante (RF-45)',
+        summary: 'Dejar de aparecer en un restaurante (RF-45)',
         description:
-          'No podrá pedir ahí hasta volver a aceptar; los pedidos anteriores se conservan. Sin afiliación: 404. Si el restaurante lo bloqueó: 409 (retirar no levanta el bloqueo).',
+          'El restaurante deja de ver al cliente; los pedidos anteriores se conservan y un pedido nuevo vuelve a afiliarlo. Sin afiliación: 404. Si el restaurante lo bloqueó: 409 (retirar no levanta el bloqueo).',
         ...protegido(['cliente']),
         responses: {
           ...ok('Retirado', undefined),
@@ -1014,8 +1014,8 @@ export const openapi = {
           'Si lo crea un mesero sin empleado_id, él queda como responsable. mesa_id (solo personal y presencial): activa y de la sucursal del pedido (RN-39); un cliente que la envía recibe 400 "Solo los pedidos presenciales del personal llevan mesa".',
           'El pedido es de la sucursal de sus productos; todos deben ser de la misma sucursal (400 si no).',
           'La sucursal debe estar activa y su restaurante activo (400 "Esta sucursal no está recibiendo pedidos por ahora") y dentro de su horario (400 "La sucursal está fuera de su horario de atención"); el personal solo registra pedidos de su alcance.',
-          'El cliente debe estar afiliado (activo) al restaurante de la sucursal (RN-27): sin afiliación, 409 con `codigo: "afiliacion_requerida"` y `data: {restaurante_id, restaurante}` (la app pide aceptar con POST /afiliaciones y reintenta);',
-          'si lo registra el personal, `consentimiento_presencial: true` crea la afiliación presencial. Cliente bloqueado en ese restaurante: 403.'
+          'Si el cliente no está afiliado al restaurante de la sucursal (o se retiró), el pedido lo afilia en la misma transacción (RN-27, `origen` pedido; con `consentimiento_presencial: true` del personal, presencial).',
+          'Cliente bloqueado en ese restaurante: 403.'
         ].join(' '),
         'x-reglas': ['RN-06', 'RN-07', 'RN-08', 'RN-19', 'RN-20', 'RN-21', 'RN-22', 'RN-27', 'RN-38', 'RN-39'],
         ...protegido(['cliente', 'admin', 'empleado', 'cajero', 'mesero']),
@@ -1036,12 +1036,11 @@ export const openapi = {
             mesa_id: { type: 'integer', description: 'Solo personal y pedidos presenciales (RN-39).' },
             empleado_id: { type: 'integer', description: 'Solo personal' },
             empleado_preparacion_id: { type: 'integer', description: 'Solo personal' },
-            consentimiento_presencial: { type: 'boolean', description: 'Solo personal: el cliente aceptó en persona compartir sus datos con el restaurante (RF-43).' }
+            consentimiento_presencial: { type: 'boolean', description: 'Solo personal, opcional: marca la afiliación como presencial (RF-43).' }
           }
         }),
         responses: {
           ...ok('Creado', ref('Pedido'), '201'),
-          ...error('409', 'Cliente sin afiliación al restaurante (`codigo: "afiliacion_requerida"`)'),
           ...error('400', 'Ej.: "Stock insuficiente para \\"X\\". Disponible: 3", "Cantidad máxima por producto: 50 (producto id N)", "El producto \\"X\\" no está disponible"'),
           ...E401,
           ...E403

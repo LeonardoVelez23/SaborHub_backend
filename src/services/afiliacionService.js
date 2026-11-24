@@ -3,11 +3,14 @@ import { ErrorNegocio } from '../errors/ErrorNegocio.js';
 /**
  * Clientes por restaurante (DERCAS 12, RF-43 a RF-45, RN-26 a RN-28).
  *
- * La cuenta es de la plataforma; la afiliación es el consentimiento del
- * cliente para que un restaurante trate sus datos. Estados: `activo`
- * (puede pedir), `bloqueado` (lo bloqueó ese restaurante) y `retirado`
- * (el cliente retiró su consentimiento). El restaurante del personal sale
- * de la sesión, nunca de la petición.
+ * La cuenta, los términos y la política de privacidad son de la plataforma
+ * SaborHub y se aceptan una sola vez, al registrarse (modelo tipo Uber). La
+ * afiliación solo registra que el cliente le pidió a un restaurante: se crea
+ * sola con su primer pedido y marca qué clientes ve ese restaurante (RN-26).
+ * Estados: `activo`, `bloqueado` (lo bloqueó ese restaurante, que no recibe
+ * sus pedidos) y `retirado` (el cliente pidió que el restaurante deje de
+ * verlo; vuelve a `activo` con su próximo pedido). El restaurante del
+ * personal sale de la sesión, nunca de la petición.
  */
 
 const SIN_RESTAURANTE = 'Tu usuario no pertenece a un restaurante';
@@ -40,8 +43,10 @@ export const crearAfiliacionService = ({ afiliaciones, restaurantes, versionLega
 
   return {
     /**
-     * El cliente acepta compartir sus datos con un restaurante (RF-43).
-     * Reactiva una afiliación retirada; una bloqueada sigue bloqueada.
+     * Afiliación explícita (RF-43). Ya no hace falta para pedir: el primer
+     * pedido la crea sola. Se mantiene por compatibilidad con versiones
+     * anteriores de la app. Reactiva una retirada; una bloqueada sigue
+     * bloqueada.
      */
     afiliar: async (clienteId, { restaurante_id, acepta_compartir, version_legal } = {}) => {
       const restauranteId = idValido(restaurante_id, 'restaurante_id');
@@ -65,7 +70,10 @@ export const crearAfiliacionService = ({ afiliaciones, restaurantes, versionLega
     /** Mis restaurantes (RF-45). */
     mias: (clienteId) => afiliaciones.delCliente(clienteId),
 
-    /** El cliente retira su consentimiento (RF-45); sus pedidos se conservan. */
+    /**
+     * El cliente pide que el restaurante deje de verlo (RF-45); sus pedidos
+     * se conservan y un pedido nuevo vuelve a afiliarlo.
+     */
     retirar: async (clienteId, restauranteIdTexto) => {
       const restauranteId = idValido(restauranteIdTexto, 'restaurante_id');
       const fila = await afiliaciones.buscar(clienteId, restauranteId);
@@ -78,11 +86,12 @@ export const crearAfiliacionService = ({ afiliaciones, restaurantes, versionLega
     },
 
     /**
-     * Antes de crear un pedido (RN-27). Si lo registra el personal y el
-     * cliente no está afiliado, `consentimientoPresencial` crea la
-     * afiliación presencial; si no, 409 con `afiliacion_requerida`.
+     * Al crear un pedido (RN-27): si el cliente no está afiliado o se
+     * retiró, la afiliación se crea o se reactiva en la misma transacción
+     * (`origen` 'pedido'; 'presencial' si el personal registró el
+     * consentimiento en persona). Bloqueado en ese restaurante: 403.
      */
-    exigirParaPedido: async ({ clienteId, restaurante, deCliente, consentimientoPresencial, t }) => {
+    asegurarParaPedido: async ({ clienteId, restaurante, deCliente, consentimientoPresencial, t }) => {
       const fila = await afiliaciones.buscar(clienteId, restaurante.id, t);
       if (fila?.estado === 'activo') return fila;
       if (fila?.estado === 'bloqueado') {
@@ -91,16 +100,8 @@ export const crearAfiliacionService = ({ afiliaciones, restaurantes, versionLega
           403
         );
       }
-      if (!deCliente && consentimientoPresencial === true) {
-        return nuevaAfiliacion(clienteId, restaurante.id, 'presencial', t, fila);
-      }
-      throw new ErrorNegocio(
-        deCliente
-          ? `Para pedir en ${restaurante.nombre} debes aceptar compartir tus datos con este restaurante`
-          : 'El cliente no está afiliado a este restaurante: confirma su consentimiento presencial (consentimiento_presencial)',
-        409,
-        { codigo: 'afiliacion_requerida', datos: { restaurante_id: restaurante.id, restaurante: restaurante.nombre } }
-      );
+      const origen = !deCliente && consentimientoPresencial === true ? 'presencial' : 'pedido';
+      return nuevaAfiliacion(clienteId, restaurante.id, origen, t, fila);
     },
 
     /** Afiliación presencial al registrar un cliente desde el panel. */

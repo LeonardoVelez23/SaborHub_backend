@@ -38,7 +38,7 @@ export const paginaLegal = (documento) => {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${e(documento.titulo)} · Sabor Politécnico</title>
+<title>${e(documento.titulo)} · SaborHub</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
@@ -63,7 +63,7 @@ export const paginaLegal = (documento) => {
 </head>
 <body>
 <header>
-  <div class="marca">Sabor <span>Politécnico</span></div>
+  <div class="marca">Sabor<span>Hub</span></div>
   <nav>${nav}</nav>
 </header>
 <main>
@@ -71,7 +71,7 @@ export const paginaLegal = (documento) => {
   <p class="version">Versión del ${e(documento.version)}</p>
 ${secciones}
 </main>
-<footer>Sabor Politécnico · Restaurante universitario</footer>
+<footer>SaborHub · Plataforma de pedidos a restaurantes</footer>
 </body>
 </html>`;
 };

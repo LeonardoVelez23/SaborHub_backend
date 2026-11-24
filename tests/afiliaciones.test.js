@@ -47,17 +47,22 @@ describe('Clientes por restaurante (afiliación)', () => {
   });
 
   describe('pedido del cliente (RN-27)', () => {
-    it('sin afiliación responde 409; tras aceptar, el pedido se crea (CA-40)', async () => {
-      const sin = await pedir(tokenAna, SX);
-      expect(sin.status).toBe(409);
-      expect(sin.body.codigo).toBe('afiliacion_requerida');
-      expect(sin.body.data).toMatchObject({ restaurante_id: SX.restaurante_id });
-      expect(await Pedido.count()).toBe(0);
+    it('el primer pedido en un restaurante afilia al cliente sin pasos extra (CA-40)', async () => {
+      expect(await ClienteRestaurante.count()).toBe(0);
+      const res = await pedir(tokenAna, SX);
+      expect(res.status).toBe(201);
+      const fila = await ClienteRestaurante.findOne({ where: { cliente_id: ana.id, restaurante_id: SX.restaurante_id } });
+      expect(fila).toMatchObject({ estado: 'activo', origen: 'pedido', legal_version: VERSION_LEGAL });
 
+      // El segundo pedido no duplica la afiliación.
+      expect((await pedir(tokenAna, SX)).status).toBe(201);
+      expect(await ClienteRestaurante.count({ where: { cliente_id: ana.id } })).toBe(1);
+    });
+
+    it('la afiliación explícita sigue disponible (compatibilidad)', async () => {
       const acepta = await afiliarme(tokenAna, SX.restaurante_id);
       expect(acepta.status).toBe(201);
       expect(acepta.body.data).toMatchObject({ estado: 'activo', origen: 'app', legal_version: VERSION_LEGAL });
-
       expect((await pedir(tokenAna, SX)).status).toBe(201);
     });
 
@@ -75,6 +80,7 @@ describe('Clientes por restaurante (afiliación)', () => {
       const enX = await pedir(tokenAna, SX);
       expect(enX.status).toBe(403);
       expect(enX.body.message).toBe('Tu cuenta está bloqueada en este restaurante');
+      expect(await Pedido.count({ where: { cliente_id: ana.id } })).toBe(0);
       expect((await afiliarme(tokenAna, SX.restaurante_id)).status).toBe(403);
 
       expect((await pedir(tokenAna, SY)).status).toBe(201);
@@ -95,12 +101,15 @@ describe('Clientes por restaurante (afiliación)', () => {
 
       const retira = await api().delete(`/api/v1/afiliaciones/${SX.restaurante_id}`).set(auth(tokenAna));
       expect(retira.status).toBe(200);
-      expect((await pedir(tokenAna, SX)).status).toBe(409);
       expect(await Pedido.count({ where: { cliente_id: ana.id } })).toBe(1);
+      const token = await login(await empleadoDe('cajero', SX));
+      expect((await api().get('/api/v1/clientes').set(auth(token))).body.data).toHaveLength(0);
 
-      // Volver a aceptar la reactiva.
-      expect((await afiliarme(tokenAna, SX.restaurante_id)).status).toBe(201);
+      // Un pedido nuevo la reactiva y el restaurante vuelve a verlo.
       expect((await pedir(tokenAna, SX)).status).toBe(201);
+      const fila = await ClienteRestaurante.findOne({ where: { cliente_id: ana.id } });
+      expect(fila).toMatchObject({ estado: 'activo', origen: 'pedido' });
+      expect((await api().get('/api/v1/clientes').set(auth(token))).body.data.map((c) => c.id)).toEqual([ana.id]);
     });
 
     it('retirar no levanta un bloqueo', async () => {
@@ -153,15 +162,26 @@ describe('Clientes por restaurante (afiliación)', () => {
       expect(lista.body.data.map((c) => c.id).sort()).toEqual([ana.id, beto.id].sort());
     });
 
-    it('pedido asistido: sin afiliación 409; con consentimiento presencial se afilia y se crea', async () => {
+    it('el personal ve al cliente después de su primer pedido', async () => {
+      const token = await login(await empleadoDe('cajero', SX));
+      const admin = await login(await empleadoDe('admin', SX));
+      expect((await api().get(`/api/v1/clientes/${ana.id}`).set(auth(admin))).status).toBe(404);
+      expect((await pedir(tokenAna, SX)).status).toBe(201);
+      const lista = await api().get('/api/v1/clientes').set(auth(token));
+      expect(lista.body.data.map((c) => c.id)).toEqual([ana.id]);
+      expect((await api().get(`/api/v1/clientes/${ana.id}`).set(auth(admin))).status).toBe(200);
+    });
+
+    it('pedido asistido: afilia al cliente; con consentimiento presencial queda como presencial', async () => {
       const token = await login(await empleadoDe('cajero', SX));
       const sin = await pedir(token, SX, { modalidad: 'presencial', cliente_id: ana.id });
-      expect(sin.status).toBe(409);
-      expect(sin.body.codigo).toBe('afiliacion_requerida');
+      expect(sin.status).toBe(201);
+      expect(await ClienteRestaurante.findOne({ where: { cliente_id: ana.id } })).toMatchObject({ origen: 'pedido' });
 
-      const con = await pedir(token, SX, { modalidad: 'presencial', cliente_id: ana.id, consentimiento_presencial: true });
+      const beto = await crearCliente();
+      const con = await pedir(token, SX, { modalidad: 'presencial', cliente_id: beto.id, consentimiento_presencial: true });
       expect(con.status).toBe(201);
-      const fila = await ClienteRestaurante.findOne({ where: { cliente_id: ana.id, restaurante_id: SX.restaurante_id } });
+      const fila = await ClienteRestaurante.findOne({ where: { cliente_id: beto.id, restaurante_id: SX.restaurante_id } });
       expect(fila).toMatchObject({ estado: 'activo', origen: 'presencial' });
     });
 

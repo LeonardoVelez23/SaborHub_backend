@@ -14,7 +14,7 @@ ClienteRestaurante.init(
     cliente_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'Clientes', key: 'id' } },
     restaurante_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'Restaurantes', key: 'id' } },
     estado: { type: DataTypes.ENUM('activo', 'bloqueado', 'retirado'), allowNull: false, defaultValue: 'activo' },
-    origen: { type: DataTypes.ENUM('app', 'presencial'), allowNull: false },
+    origen: { type: DataTypes.ENUM('app', 'presencial', 'pedido'), allowNull: false },
     legal_version: { type: DataTypes.STRING(20), allowNull: false },
     afiliado_en: { type: DataTypes.DATE, allowNull: false },
     bloqueado_en: { type: DataTypes.DATE, allowNull: true },
