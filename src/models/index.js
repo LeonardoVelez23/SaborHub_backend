@@ -13,6 +13,7 @@ import CarritoItem from './CarritoItem.js';
 import Restaurante from './Restaurante.js';
 import Sucursal from './Sucursal.js';
 import ClienteRestaurante from './ClienteRestaurante.js';
+import Mesa from './Mesa.js';
 
 // --- Asociaciones ---
 
@@ -29,6 +30,12 @@ Restaurante.hasMany(Empleado, { foreignKey: 'restaurante_id', as: 'empleados' })
 Empleado.belongsTo(Restaurante, { foreignKey: 'restaurante_id', as: 'restaurante' });
 Sucursal.hasMany(Empleado, { foreignKey: 'sucursal_id', as: 'empleados' });
 Empleado.belongsTo(Sucursal, { foreignKey: 'sucursal_id', as: 'sucursal' });
+
+// Sucursal -> Mesa -> Pedido (DERCAS M9, RN-39)
+Sucursal.hasMany(Mesa, { foreignKey: 'sucursal_id', as: 'mesas' });
+Mesa.belongsTo(Sucursal, { foreignKey: 'sucursal_id', as: 'sucursal' });
+Mesa.hasMany(Pedido, { foreignKey: 'mesa_id', as: 'pedidos' });
+Pedido.belongsTo(Mesa, { foreignKey: 'mesa_id', as: 'mesa' });
 
 // Categoria <-> Producto (Uno a Muchos)
 Categoria.hasMany(Producto, { foreignKey: 'categoria_id', as: 'productos' });
@@ -123,5 +130,6 @@ export {
   CarritoItem,
   Restaurante,
   Sucursal,
-  ClienteRestaurante
+  ClienteRestaurante,
+  Mesa
 };

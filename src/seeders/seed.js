@@ -1,4 +1,4 @@
-import { sequelize, Categoria, Producto, Cliente, Empleado, Restaurante, Sucursal, ClienteRestaurante } from '../models/index.js';
+import { sequelize, Categoria, Producto, Cliente, Empleado, Restaurante, Sucursal, ClienteRestaurante, Mesa } from '../models/index.js';
 import bcrypt from 'bcryptjs';
 
 const seed = async () => {
@@ -393,6 +393,12 @@ const seed = async () => {
       where: { cliente_id: cliente.id, restaurante_id: restaurante.id },
       defaults: { estado: 'activo', origen: 'app', legal_version: 'semilla', afiliado_en: new Date() }
     });
+
+    // 6. Mesas de la sucursal Principal (DERCAS M9). El consumidor final
+    // lo crea la migración 20261124000001.
+    for (let numero = 1; numero <= 10; numero += 1) {
+      await Mesa.findOrCreate({ where: { sucursal_id: sucursal.id, nombre: `Mesa ${numero}` } });
+    }
 
     console.log('¡Siembra de datos (seeding) finalizada exitosamente con catálogo completo!');
     process.exit(0);

@@ -16,6 +16,9 @@ const unico = async (operacion) => {
 
 const noEncontrado = () => new ErrorNegocio('Cliente no encontrado', 404);
 
+/** El consumidor final es del sistema: no se edita ni se elimina (RN-38). */
+const consumidorFinalFijo = () => new ErrorNegocio('El consumidor final no se puede modificar ni eliminar', 403);
+
 const esPersonal = (usuario) => Boolean(usuario) && usuario.rol !== 'cliente';
 const esSuperadmin = (usuario) => usuario?.nivel === 'plataforma';
 
@@ -109,6 +112,7 @@ export const crearClienteService = ({ clientes, afiliacion, otps, contrasenias, 
     comprobarCuenta(usuario, id);
     const cliente = await clientes.buscar(id);
     if (!cliente) throw noEncontrado();
+    if (cliente.es_consumidor_final) throw consumidorFinalFijo();
 
     const cambio = await cambioDeContrasenia(
       { cuenta: cliente, contrasenia: datos.contrasenia, otp: datos.otp, sinOtp: esSuperadmin(usuario) },
@@ -135,6 +139,7 @@ export const crearClienteService = ({ clientes, afiliacion, otps, contrasenias, 
     }
     const cliente = await clientes.buscar(id);
     if (!cliente) throw noEncontrado();
+    if (cliente.es_consumidor_final) throw consumidorFinalFijo();
     await clientes.eliminar(cliente);
   }
 });

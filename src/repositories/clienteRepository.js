@@ -4,10 +4,10 @@ const SIN_CONTRASENIA = { exclude: ['contrasenia'] };
 
 /** Acceso a Clientes. `m` son los modelos (se leen al usarse). */
 export const crearClienteRepository = (m) => ({
-  /** Sin las cuentas eliminadas, por apellidos y nombres. */
+  /** Sin las cuentas eliminadas ni el consumidor final, por apellidos y nombres. */
   listarActivos: () =>
     m.Cliente.findAll({
-      where: { eliminado_en: null },
+      where: { eliminado_en: null, es_consumidor_final: false },
       attributes: SIN_CONTRASENIA,
       order: [['apellidos', 'ASC'], ['nombres', 'ASC']]
     }),

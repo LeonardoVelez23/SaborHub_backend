@@ -14,6 +14,7 @@ import carritoRoutes from './carritoRoutes.js';
 import restauranteRoutes from './restauranteRoutes.js';
 import sucursalRoutes from './sucursalRoutes.js';
 import afiliacionRoutes from './afiliacionRoutes.js';
+import mesaRoutes from './mesaRoutes.js';
 import { openapi } from '../docs/openapi.js';
 
 const router = Router();
@@ -33,6 +34,7 @@ router.use('/categorias', categoriaRoutes);
 router.use('/productos', productoRoutes);
 router.use('/clientes', clienteRoutes);
 router.use('/empleados', empleadoRoutes);
+router.use('/mesas', mesaRoutes);
 router.use('/pedidos', pedidoRoutes);
 router.use('/pagos', pagoRoutes);
 

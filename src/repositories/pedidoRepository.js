@@ -1,7 +1,15 @@
-import { Op } from 'sequelize';
+import { Op, literal } from 'sequelize';
 import { filtroSucursal, porId } from './alcance.js';
 
-const ATRIBUTOS_CLIENTE = ['id', 'nombres', 'apellidos', 'identificacion', 'correo_electronico', 'telefono'];
+const ATRIBUTOS_CLIENTE = [
+  'id',
+  'nombres',
+  'apellidos',
+  'identificacion',
+  'correo_electronico',
+  'telefono',
+  'es_consumidor_final'
+];
 const ATRIBUTOS_EMPLEADO = ['id', 'nombres', 'apellidos', 'cargo'];
 const ATRIBUTOS_PRODUCTO = ['id', 'codigo', 'nombre', 'precio', 'imagen_codigo'];
 const ATRIBUTOS_PAGO = ['id', 'fecha', 'valor', 'metodo_pago', 'numero_referencia', 'estado'];
@@ -32,6 +40,7 @@ export const crearPedidoRepository = (m) => {
 
   const includeCompleto = ({ conCategoria = false } = {}) => [
     { model: m.Cliente, as: 'cliente', attributes: ATRIBUTOS_CLIENTE },
+    { model: m.Mesa, as: 'mesa', attributes: ['id', 'nombre'] },
     { model: m.Empleado, as: 'empleadoResponsable', attributes: ATRIBUTOS_EMPLEADO },
     { model: m.Empleado, as: 'empleadoPreparacion', attributes: ATRIBUTOS_EMPLEADO },
     {
@@ -114,9 +123,18 @@ export const crearPedidoRepository = (m) => {
 
     contar: (periodo) => m.Pedido.count({ where: filtroPeriodo(periodo) }),
 
-    /** Clientes distintos con pedidos en el alcance (sin fechas). */
+    /** Clientes distintos con pedidos en el alcance (sin fechas ni el consumidor final). */
     contarClientes: (alcance) =>
-      m.Pedido.count({ distinct: true, col: 'cliente_id', where: filtroSucursal(alcance) }),
+      m.Pedido.count({
+        distinct: true,
+        col: 'cliente_id',
+        where: {
+          [Op.and]: [
+            filtroSucursal(alcance),
+            { cliente_id: { [Op.notIn]: literal('(SELECT id FROM "Clientes" WHERE es_consumidor_final)') } }
+          ]
+        }
+      }),
 
     /** Suma de pagos aprobados de los pedidos del rango (RN-13). */
     ingresos: async (periodo) => {

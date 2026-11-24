@@ -10,6 +10,7 @@ import {
   cantidadesDeLineas,
   esFechaValida,
   estadoPagoAlCancelar,
+  validarCambioDeMesero,
   validarModalidad,
   validarTransicion
 } from './reglasPedido.js';
@@ -50,6 +51,46 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
       throw new ErrorNegocio('La sucursal está fuera de su horario de atención');
     }
     return sucursal;
+  };
+
+  /**
+   * Mesa de un pedido presencial del personal (RN-39): activa y de la
+   * sucursal del pedido. Sin mesa → null.
+   */
+  const mesaValida = async (mesaId, { deCliente, modalidad, sucursalId }, t) => {
+    if (mesaId === undefined || mesaId === null || mesaId === '') return null;
+    if (deCliente || modalidad !== 'presencial') {
+      throw new ErrorNegocio('Solo los pedidos presenciales del personal llevan mesa');
+    }
+    const id = Number(mesaId);
+    const mesa = Number.isInteger(id) && id > 0 ? await personas.mesa(id, t) : null;
+    if (!mesa || mesa.sucursal_id !== sucursalId) {
+      throw new ErrorNegocio('La mesa indicada no existe en esta sucursal');
+    }
+    if (!mesa.activa) throw new ErrorNegocio('La mesa indicada está desactivada');
+    return mesa.id;
+  };
+
+  /**
+   * Cliente del pedido: el de la sesión, el indicado por el personal o, en
+   * un pedido presencial del personal sin cliente, el consumidor final
+   * (RN-38).
+   */
+  const clienteDelPedido = async ({ usuario, deCliente, clienteId, modalidad }, t) => {
+    if (deCliente) return personas.cliente(usuario.id, t);
+    if (clienteId === undefined || clienteId === null || clienteId === '') {
+      if (modalidad !== 'presencial') {
+        throw new ErrorNegocio('cliente_id es obligatorio para registrar un pedido a nombre de un cliente');
+      }
+      const consumidorFinal = await personas.consumidorFinal(t);
+      if (!consumidorFinal) throw new ErrorNegocio('No está configurado el consumidor final', 500);
+      return consumidorFinal;
+    }
+    const cliente = await personas.cliente(clienteId, t);
+    if (cliente?.es_consumidor_final && modalidad !== 'presencial') {
+      throw new ErrorNegocio('El consumidor final solo se usa en pedidos presenciales');
+    }
+    return cliente;
   };
 
   /**
@@ -105,32 +146,42 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
      * (RN-19). Exige la afiliación del cliente al restaurante (RN-27). Si
      * lo hace el cliente, se vacía su carrito.
      */
-    crear: async (usuario, { modalidad, detalles, cliente_id, empleado_id, empleado_preparacion_id, consentimiento_presencial }) => {
+    crear: async (
+      usuario,
+      { modalidad, detalles, cliente_id, empleado_id, empleado_preparacion_id, consentimiento_presencial, mesa_id }
+    ) => {
       const pedidoId = await transacciones.ejecutar(async (t) => {
         validarModalidad(modalidad);
         const cantidades = agruparDetalles(detalles);
 
         const deCliente = esCliente(usuario);
-        const clienteId = deCliente ? usuario.id : cliente_id;
-        if (!clienteId) {
-          throw new ErrorNegocio('cliente_id es obligatorio para registrar un pedido a nombre de un cliente');
+        const conMesa = mesa_id !== undefined && mesa_id !== null && mesa_id !== '';
+        if (conMesa && (deCliente || modalidad !== 'presencial')) {
+          throw new ErrorNegocio('Solo los pedidos presenciales del personal llevan mesa');
         }
-        const cliente = await personas.cliente(clienteId, t);
+        const cliente = await clienteDelPedido({ usuario, deCliente, clienteId: cliente_id, modalidad }, t);
         if (!cliente) throw new ErrorNegocio('El cliente indicado no existe');
 
         const { lineas, total, sucursalId } = await reservarStock(cantidades, t);
         const sucursal = await sucursalQueRecibe(sucursalId, usuario);
-        // Afiliación activa del cliente al restaurante (RN-27).
-        await afiliacion.exigirParaPedido({
-          clienteId: cliente.id,
-          restaurante: sucursal.restaurante,
-          deCliente,
-          consentimientoPresencial: consentimiento_presencial,
-          t
-        });
+        const mesaId = await mesaValida(mesa_id, { deCliente, modalidad, sucursalId }, t);
+        // Afiliación activa del cliente al restaurante (RN-27); el
+        // consumidor final no la necesita (RN-38).
+        if (!cliente.es_consumidor_final) {
+          await afiliacion.exigirParaPedido({
+            clienteId: cliente.id,
+            restaurante: sucursal.restaurante,
+            deCliente,
+            consentimientoPresencial: consentimiento_presencial,
+            t
+          });
+        }
 
-        // Un cliente no asigna personal a su pedido.
-        const empleadoId = deCliente ? null : await empleadoValido(empleado_id, 'empleado_id', sucursalId, t);
+        // Un cliente no asigna personal a su pedido. El mesero que no
+        // indica responsable queda como responsable (RF-56).
+        const empleadoPedido =
+          empleado_id === undefined && usuario.rol === 'mesero' ? usuario.id : empleado_id;
+        const empleadoId = deCliente ? null : await empleadoValido(empleadoPedido, 'empleado_id', sucursalId, t);
         const preparacionId = deCliente
           ? null
           : await empleadoValido(empleado_preparacion_id, 'empleado_preparacion_id', sucursalId, t);
@@ -147,7 +198,8 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
             cliente_id: cliente.id,
             empleado_id: empleadoId,
             empleado_preparacion_id: preparacionId,
-            sucursal_id: sucursalId
+            sucursal_id: sucursalId,
+            mesa_id: mesaId
           },
           t
         );
@@ -167,6 +219,9 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
       await transacciones.ejecutar(async (t) => {
         const pedido = await pedidos.bloquear(id, t, alcanceDe(usuario));
         if (!pedido) throw new ErrorNegocio('Pedido no encontrado', 404);
+        if (usuario.rol === 'mesero') {
+          validarCambioDeMesero(pedido, { estado, empleado_id, empleado_preparacion_id, modalidad });
+        }
 
         if (estado) validarTransicion(pedido.estado, estado, usuario.rol?.toLowerCase());
 
@@ -180,6 +235,9 @@ export const crearPedidoService = ({ pedidos, productos, pagos, personas, sucurs
           await empleadoValido(empleado_preparacion_id, 'empleado_preparacion_id', pedido.sucursal_id, t);
         }
         if (modalidad) validarModalidad(modalidad);
+        if (modalidad && modalidad !== 'presencial' && pedido.mesa_id) {
+          throw new ErrorNegocio('Un pedido con mesa solo puede ser presencial');
+        }
 
         if (estado === 'cancelado') {
           await devolverStock(await pedidos.detalles(pedido.id, t), t);

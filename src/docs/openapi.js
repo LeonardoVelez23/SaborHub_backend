@@ -348,15 +348,35 @@ export const openapi = {
           empleado_id: { type: ['integer', 'null'] },
           empleado_preparacion_id: { type: ['integer', 'null'] },
           sucursal_id: { type: 'integer', description: 'La de sus productos (RN-20).' },
+          mesa_id: { type: ['integer', 'null'], description: 'Mesa de un pedido presencial del personal (RN-39).' },
           createdAt: { type: 'string', format: 'date-time' },
           updatedAt: { type: 'string', format: 'date-time' },
           cliente: {
             type: 'object',
-            description: 'id, nombres, apellidos, identificacion, correo_electronico, telefono'
+            description:
+              'id, nombres, apellidos, identificacion, correo_electronico, telefono, es_consumidor_final (true en pedidos de mesa sin cliente, RN-38)'
           },
+          mesa: { type: ['object', 'null'], description: 'id, nombre' },
           empleadoResponsable: { type: ['object', 'null'], description: 'id, nombres, apellidos, cargo' },
           empleadoPreparacion: { type: ['object', 'null'], description: 'id, nombres, apellidos, cargo' },
           detalles: lista(ref('DetallePedido'))
+        }
+      },
+      Mesa: {
+        type: 'object',
+        description: 'Mesa del salón de una sucursal (RN-39).',
+        properties: {
+          id: { type: 'integer' },
+          sucursal_id: { type: 'integer' },
+          nombre: { type: 'string', maxLength: 30, description: 'Único en la sucursal.' },
+          activa: { type: 'boolean' },
+          creado_en: { type: 'string', format: 'date-time' },
+          ocupada: { type: 'boolean', description: 'Solo en GET /mesas: tiene pedidos abiertos.' },
+          pedidos_abiertos: {
+            type: 'integer',
+            description: 'Solo en GET /mesas: pedidos no cancelados que no estén entregados con pago aprobado.'
+          },
+          total_pendiente: { type: 'number', description: 'Solo en GET /mesas: suma del total de los pedidos abiertos.' }
         }
       },
       MiPedido: {
@@ -982,13 +1002,14 @@ export const openapi = {
           'En una transacción: agrupa líneas del mismo producto, bloquea las filas de producto (SELECT ... FOR UPDATE, por id ascendente),',
           'valida existencia, disponibilidad y stock, descuenta el stock, calcula precio_unitario (precio vigente), subtotal y total (redondeo a 2 decimales).',
           'Estado inicial "solicitado"; fecha y hora del servidor. Si lo crea un cliente: cliente_id = el del token, sin empleados, y se vacía su carrito.',
-          'Si lo crea el personal: cliente_id obligatorio y empleado_id / empleado_preparacion_id opcionales.',
+          'Si lo crea el personal: cliente_id, empleado_id y empleado_preparacion_id opcionales. Sin cliente_id en un pedido presencial, queda a nombre del consumidor final (RN-38, sin afiliación); en uno en línea es obligatorio.',
+          'Si lo crea un mesero sin empleado_id, él queda como responsable. mesa_id (solo personal y presencial): activa y de la sucursal del pedido (RN-39); un cliente que la envía recibe 400 "Solo los pedidos presenciales del personal llevan mesa".',
           'El pedido es de la sucursal de sus productos; todos deben ser de la misma sucursal (400 si no).',
           'La sucursal debe estar activa y su restaurante activo (400 "Esta sucursal no está recibiendo pedidos por ahora") y dentro de su horario (400 "La sucursal está fuera de su horario de atención"); el personal solo registra pedidos de su alcance.',
           'El cliente debe estar afiliado (activo) al restaurante de la sucursal (RN-27): sin afiliación, 409 con `codigo: "afiliacion_requerida"` y `data: {restaurante_id, restaurante}` (la app pide aceptar con POST /afiliaciones y reintenta);',
           'si lo registra el personal, `consentimiento_presencial: true` crea la afiliación presencial. Cliente bloqueado en ese restaurante: 403.'
         ].join(' '),
-        'x-reglas': ['RN-06', 'RN-07', 'RN-08', 'RN-19', 'RN-20', 'RN-21', 'RN-22', 'RN-27'],
+        'x-reglas': ['RN-06', 'RN-07', 'RN-08', 'RN-19', 'RN-20', 'RN-21', 'RN-22', 'RN-27', 'RN-38', 'RN-39'],
         ...protegido(['cliente', 'admin', 'empleado', 'cajero', 'mesero']),
         ...cuerpo({
           type: 'object',
@@ -1000,7 +1021,11 @@ export const openapi = {
               required: ['producto_id', 'cantidad'],
               properties: { producto_id: { type: 'integer' }, cantidad: { type: 'integer', minimum: 1 } }
             }),
-            cliente_id: { type: 'integer', description: 'Solo personal (obligatorio)' },
+            cliente_id: {
+              type: 'integer',
+              description: 'Solo personal. Obligatorio en pedidos en línea; sin él, un pedido presencial es del consumidor final.'
+            },
+            mesa_id: { type: 'integer', description: 'Solo personal y pedidos presenciales (RN-39).' },
             empleado_id: { type: 'integer', description: 'Solo personal' },
             empleado_preparacion_id: { type: 'integer', description: 'Solo personal' },
             consentimiento_presencial: { type: 'boolean', description: 'Solo personal: el cliente aceptó en persona compartir sus datos con el restaurante (RF-43).' }
@@ -1075,10 +1100,11 @@ export const openapi = {
           'Transiciones válidas: solicitado → confirmado | en preparación | cancelado; confirmado → en preparación | cancelado;',
           'en preparación → listo | cancelado; listo → entregado | cancelado; entregado y cancelado son finales.',
           'Desde confirmado en adelante exige empleado_id. El cocinero no cancela (403).',
+          'El mesero solo envía `{estado: "entregado"}` para un pedido listo de su sucursal; cualquier otro cambio, 403 (RN-40). Un pedido con mesa no pasa a "en línea".',
           'Cancelar devuelve el stock y pasa el pago pendiente a rechazado y el aprobado a reembolsado.'
         ].join(' '),
-        'x-reglas': ['RN-01', 'RN-02', 'RN-03', 'RN-04'],
-        ...protegido(['admin', 'empleado', 'cajero', 'cocinero']),
+        'x-reglas': ['RN-01', 'RN-02', 'RN-03', 'RN-04', 'RN-40'],
+        ...protegido(PERSONAL),
         ...cuerpo({
           type: 'object',
           properties: {
@@ -1096,6 +1122,73 @@ export const openapi = {
         'x-reglas': ['RN-05'],
         ...protegido(['admin']),
         responses: { ...ok('Eliminado (devuelve el stock si no estaba cancelado)', undefined), ...E400, ...E401, ...E403, ...E404 }
+      }
+    },
+
+    // --------------------------------------------------------------- Mesas
+    '/mesas': {
+      get: {
+        tags: ['Mesas'],
+        summary: 'Mesas de la sucursal con su ocupación (RF-55, RF-56)',
+        description:
+          'La sucursal del personal; el admin de restaurante y el superadmin indican sucursal_id (obligatorio para ellos). Solo activas, salvo incluir_inactivas=true. Orden por nombre (Mesa 2 antes que Mesa 10).',
+        'x-reglas': ['RN-21', 'RN-39'],
+        ...protegido(PERSONAL),
+        parameters: [
+          { name: 'sucursal_id', in: 'query', schema: { type: 'integer', minimum: 1 } },
+          { name: 'incluir_inactivas', in: 'query', schema: { type: 'boolean' } }
+        ],
+        responses: { ...ok('Lista', lista(ref('Mesa'))), ...E400, ...E401, ...E403 }
+      },
+      post: {
+        tags: ['Mesas'],
+        summary: 'Crear mesa (RF-55)',
+        ...protegido(CAJA),
+        ...cuerpo({
+          type: 'object',
+          required: ['nombre'],
+          properties: { nombre: { type: 'string', maxLength: 30 }, sucursal_id: SUCURSAL_DESTINO }
+        }),
+        responses: {
+          ...ok('Creada', ref('Mesa'), '201'),
+          ...error('409', 'Ya existe una mesa con ese nombre en la sucursal'),
+          ...E400,
+          ...E401,
+          ...E403
+        }
+      }
+    },
+    '/mesas/{id}': {
+      parameters: [idParam()],
+      put: {
+        tags: ['Mesas'],
+        summary: 'Renombrar, activar o desactivar una mesa (RF-55)',
+        ...protegido(CAJA),
+        ...cuerpo({
+          type: 'object',
+          properties: { nombre: { type: 'string', maxLength: 30 }, activa: { type: 'boolean' } }
+        }),
+        responses: {
+          ...ok('Actualizada', ref('Mesa')),
+          ...error('409', 'Ya existe una mesa con ese nombre en la sucursal'),
+          ...E400,
+          ...E401,
+          ...E403,
+          ...E404
+        }
+      },
+      delete: {
+        tags: ['Mesas'],
+        summary: 'Eliminar una mesa sin pedidos (RF-55)',
+        'x-reglas': ['RN-39'],
+        ...protegido(['admin']),
+        responses: {
+          ...ok('Eliminada', undefined),
+          ...error('409', 'La mesa tiene pedidos: desactívala'),
+          ...E401,
+          ...E403,
+          ...E404
+        }
       }
     },
 

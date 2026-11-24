@@ -19,6 +19,8 @@ import { crearCarritoRepository } from './repositories/carritoRepository.js';
 import { crearSucursalRepository } from './repositories/sucursalRepository.js';
 import { crearRestauranteRepository } from './repositories/restauranteRepository.js';
 import { crearAfiliacionRepository } from './repositories/afiliacionRepository.js';
+import { crearMesaRepository } from './repositories/mesaRepository.js';
+import { crearMesaService } from './services/mesaService.js';
 import { crearAfiliacionService } from './services/afiliacionService.js';
 import { crearRestauranteService, crearSucursalService } from './services/restauranteService.js';
 import { crearPedidoService } from './services/pedidoService.js';
@@ -68,7 +70,8 @@ const repositorios = {
   carritos: crearCarritoRepository(modelos),
   sucursales: crearSucursalRepository(modelos),
   restaurantes: crearRestauranteRepository(modelos),
-  afiliaciones: crearAfiliacionRepository(modelos)
+  afiliaciones: crearAfiliacionRepository(modelos),
+  mesas: crearMesaRepository(modelos)
 };
 
 const contrasenias = crearContrasenias(bcrypt);
@@ -145,5 +148,8 @@ export const biometricoService = crearBiometricoService({ ...repositorios, emiti
 export const carritoService = crearCarritoService({ ...repositorios, transacciones });
 
 export const restauranteService = crearRestauranteService(repositorios);
+
+/** Mesas de la sucursal (DERCAS M9). */
+export const mesaService = crearMesaService(repositorios);
 
 export const sucursalService = crearSucursalService({ ...repositorios, reloj: () => ahoraLocal() });

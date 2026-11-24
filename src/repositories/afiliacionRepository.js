@@ -34,7 +34,7 @@ export const crearAfiliacionRepository = (m) => ({
    */
   clientes: (restauranteId) =>
     m.Cliente.findAll({
-      where: { eliminado_en: null },
+      where: { eliminado_en: null, es_consumidor_final: false },
       attributes: DATOS_CLIENTE,
       include: restauranteId
         ? {
@@ -53,6 +53,7 @@ export const crearAfiliacionRepository = (m) => ({
     m.Cliente.findOne({
       where: {
         eliminado_en: null,
+        es_consumidor_final: false,
         [Op.or]: [{ identificacion: valor }, { correo_electronico: valor.toLowerCase() }]
       },
       attributes: ['id', 'nombres', 'apellidos']

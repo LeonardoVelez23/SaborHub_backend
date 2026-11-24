@@ -65,6 +65,12 @@ Pedido.init({
     type: DataTypes.INTEGER,
     allowNull: false,
     references: { model: 'Sucursales', key: 'id' }
+  },
+  // Mesa de un pedido presencial del personal (RN-39).
+  mesa_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: 'Mesas', key: 'id' }
   }
 }, {
   sequelize,

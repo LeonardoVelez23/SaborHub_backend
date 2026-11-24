@@ -51,6 +51,8 @@ vi.mock('../../src/models/index.js', () => {
       count: vi.fn().mockResolvedValue(5)
     },
     Sucursal: { findOne: vi.fn(async () => ({ id: 1, restaurante_id: 1, activa: true, restaurante: { estado: 'activo' } })) },
+    // Mesas de la sucursal (DERCAS M9): estas pruebas no usan mesa.
+    Mesa: { findByPk: vi.fn(async () => null) },
     Restaurante: { findByPk: vi.fn(async () => ({ id: 1 })) },
     // Cliente afiliado al restaurante de la sucursal (RN-27).
     ClienteRestaurante: { findOne: vi.fn(async () => ({ estado: 'activo' })) },

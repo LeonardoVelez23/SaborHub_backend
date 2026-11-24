@@ -13,16 +13,17 @@ export const crearCuentaRepository = (m) => {
   });
 
   return {
-    /** {cuenta, esCliente} o null. */
+    /** {cuenta, esCliente} o null. El consumidor final nunca ingresa (RN-38). */
     paraIngresar: async (texto) => {
-      const cliente = await m.Cliente.findOne(porCorreoOIdentificacion(texto));
+      const { where } = porCorreoOIdentificacion(texto);
+      const cliente = await m.Cliente.findOne({ where: { ...where, es_consumidor_final: false } });
       if (cliente) return { cuenta: cliente, esCliente: true };
       const empleado = await m.Empleado.findOne(porCorreoOIdentificacion(texto));
       return empleado ? { cuenta: empleado, esCliente: false } : null;
     },
 
     porCorreo: async (correo) =>
-      (await m.Cliente.findOne({ where: { correo_electronico: correo } })) ??
+      (await m.Cliente.findOne({ where: { correo_electronico: correo, es_consumidor_final: false } })) ??
       (await m.Empleado.findOne({ where: { correo_electronico: correo } })),
 
     /** Lo mínimo para validar una sesión. */

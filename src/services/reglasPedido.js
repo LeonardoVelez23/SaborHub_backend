@@ -103,6 +103,20 @@ export const cantidadesDeLineas = (detalles) => {
 };
 
 /**
+ * Lo único que el mesero cambia de un pedido: lo entrega cuando está listo
+ * (RN-40). Cualquier otro cambio → 403.
+ */
+export const validarCambioDeMesero = (pedido, cambios) => {
+  const campos = Object.entries(cambios)
+    .filter(([, valor]) => valor !== undefined)
+    .map(([campo]) => campo);
+  const soloEntrega = campos.length === 1 && campos[0] === 'estado' && cambios.estado === 'entregado';
+  if (!soloEntrega || pedido.estado !== 'listo') {
+    throw new ErrorNegocio('El mesero solo puede marcar como entregado un pedido listo', 403);
+  }
+};
+
+/**
  * Comprueba un cambio de estado (RN-01, RN-03). `rol` es el de quien lo
  * pide; el cocinero no cancela.
  */

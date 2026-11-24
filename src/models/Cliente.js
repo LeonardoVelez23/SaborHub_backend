@@ -84,6 +84,13 @@ Cliente.init({
     type: DataTypes.DATE,
     allowNull: true
   },
+  // Cliente genérico de los pedidos presenciales sin datos del comensal
+  // (RN-38): no inicia sesión ni se lista, edita o elimina.
+  es_consumidor_final: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  },
   // Intentos fallidos con el OTP vigente (máximo OTP_MAX_ATTEMPTS).
   reset_password_attempts: {
     type: DataTypes.INTEGER,
